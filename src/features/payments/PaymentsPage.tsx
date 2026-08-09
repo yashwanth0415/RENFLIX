@@ -1,0 +1,267 @@
+import { useEffect, useState } from "react";
+import { CreditCard, Plus, Search, Receipt } from "lucide-react";
+import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../hooks/useAuth";
+import {
+  Button, Card, StatusBadge, Modal, Input, Select, Textarea, PageHeader, EmptyState, Skeleton, Toast,
+} from "../../components/ui";
+import type { Payment, PaymentStatus, PaymentMethod, Tenant, Property } from "../../lib/types";
+
+const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "UPI", label: "UPI" },
+  { value: "BANK_TRANSFER", label: "Bank Transfer / NEFT / RTGS" },
+  { value: "CASH", label: "Cash" },
+  { value: "CARD", label: "Card" },
+  { value: "CHEQUE", label: "Cheque" },
+  { value: "OTHER", label: "Other" },
+];
+
+const defaultForm = {
+  tenant_id: "",
+  property_id: "",
+  amount: "",
+  payment_method: "UPI" as PaymentMethod,
+  paid_date: new Date().toISOString().split("T")[0],
+  reference_number: "",
+  notes: "",
+  status: "PAID" as PaymentStatus,
+};
+
+function formatINR(n: number) {
+  return `₹${n.toLocaleString("en-IN")}`;
+}
+
+export default function PaymentsPage() {
+  const { profile } = useAuth();
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(defaultForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [receiptPayment, setReceiptPayment] = useState<Payment | null>(null);
+
+  useEffect(() => {
+    if (profile?.organization_id) fetchAll();
+    else setLoading(false);
+  }, [profile]);
+
+  async function fetchAll() {
+    const [payRes, tenRes, propRes] = await Promise.all([
+      supabase.from("payments").select("*").eq("organization_id", profile!.organization_id!).order("created_at", { ascending: false }),
+      supabase.from("tenants").select("*").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE"),
+      supabase.from("properties").select("*").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE"),
+    ]);
+    setPayments(payRes.data || []);
+    setTenants(tenRes.data || []);
+    setProperties(propRes.data || []);
+    setLoading(false);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    const { error } = await supabase.from("payments").insert({
+      organization_id: profile!.organization_id!,
+      tenant_id: form.tenant_id,
+      property_id: form.property_id || null,
+      amount: parseFloat(form.amount),
+      payment_method: form.payment_method,
+      paid_date: form.paid_date,
+      reference_number: form.reference_number || null,
+      notes: form.notes || null,
+      status: form.status,
+    });
+    if (error) setToast({ msg: error.message, type: "error" });
+    else {
+      setToast({ msg: "Payment recorded!", type: "success" });
+      setShowModal(false);
+      setForm(defaultForm);
+      fetchAll();
+    }
+    setSubmitting(false);
+  }
+
+  const filtered = payments.filter((p) => {
+    const t = tenants.find((t) => t.id === p.tenant_id);
+    return (
+      (t?.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.reference_number || "").toLowerCase().includes(search.toLowerCase())
+    );
+  });
+
+  const totalPaid = payments.filter((p) => p.status === "PAID").reduce((s, p) => s + p.amount, 0);
+  const totalOverdue = payments.filter((p) => p.status === "OVERDUE").reduce((s, p) => s + p.amount, 0);
+
+  return (
+    <div className="animate-fade-in">
+      <PageHeader
+        title="Payments"
+        subtitle="Record and track all rent payments"
+        action={
+          <Button onClick={() => setShowModal(true)} size="sm">
+            <Plus size={16} /> Record Payment
+          </Button>
+        }
+      />
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-4 mb-5">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+          <div className="text-xs text-emerald-400 font-display font-semibold uppercase tracking-wider mb-1">Total collected</div>
+          <div className="font-display text-2xl font-bold text-emerald-400">{formatINR(totalPaid)}</div>
+        </div>
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+          <div className="text-xs text-red-400 font-display font-semibold uppercase tracking-wider mb-1">Overdue</div>
+          <div className="font-display text-2xl font-bold text-red-400">{formatINR(totalOverdue)}</div>
+        </div>
+      </div>
+
+      <div className="relative mb-5">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500" />
+        <input
+          className="w-full bg-navy-800 border border-navy-700 rounded-lg pl-9 pr-4 py-2.5 text-sm text-navy-100 placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-blue-electric"
+          placeholder="Search by tenant or reference..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col gap-2">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={<CreditCard size={28} />}
+            title="No payments yet"
+            description="Record your first payment to track rent collection."
+            action={<Button onClick={() => setShowModal(true)} size="sm"><Plus size={14} /> Record Payment</Button>}
+          />
+        </Card>
+      ) : (
+        <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
+            <thead>
+              <tr className="border-b border-navy-700">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Tenant</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Amount</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden sm:table-cell">Method</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden md:table-cell">Date</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((pay) => {
+                const tenant = tenants.find((t) => t.id === pay.tenant_id);
+                return (
+                  <tr key={pay.id} className="border-b border-navy-700/50 hover:bg-navy-700/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-white">{tenant?.full_name || "Unknown"}</div>
+                      {pay.reference_number && <div className="text-xs text-navy-500 font-mono">{pay.reference_number}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono font-bold text-emerald-400">
+                      {formatINR(pay.amount)}
+                    </td>
+                    <td className="px-4 py-3 text-center text-navy-400 hidden sm:table-cell">
+                      <span className="font-mono text-xs">{pay.payment_method || "—"}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center text-navy-400 text-xs hidden md:table-cell">
+                      {pay.paid_date ? new Date(pay.paid_date).toLocaleDateString("en-IN") : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <StatusBadge status={pay.status} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => setReceiptPayment(pay)}
+                        className="text-navy-400 hover:text-blue-400 transition-colors"
+                        title="View receipt"
+                      >
+                        <Receipt size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Record Payment Modal */}
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="Record Manual Payment">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="bg-blue-900/20 border border-blue-800 rounded-lg px-3 py-2 text-xs text-blue-300">
+            This records a manual payment. For online payments, a payment gateway integration is required.
+          </div>
+          <Select
+            label="Tenant"
+            value={form.tenant_id}
+            onChange={(e) => setForm(f => ({ ...f, tenant_id: e.target.value }))}
+            options={[{ value: "", label: "Select tenant" }, ...tenants.map((t) => ({ value: t.id, label: t.full_name }))]}
+          />
+          <Select
+            label="Property"
+            value={form.property_id}
+            onChange={(e) => setForm(f => ({ ...f, property_id: e.target.value }))}
+            options={[{ value: "", label: "Select property" }, ...properties.map((p) => ({ value: p.id, label: p.name }))]}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Amount (₹)" type="number" value={form.amount} onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))} required placeholder="18000" />
+            <Input label="Payment date" type="date" value={form.paid_date} onChange={(e) => setForm(f => ({ ...f, paid_date: e.target.value }))} required />
+          </div>
+          <Select
+            label="Payment method"
+            value={form.payment_method}
+            onChange={(e) => setForm(f => ({ ...f, payment_method: e.target.value as PaymentMethod }))}
+            options={PAYMENT_METHODS}
+          />
+          <Input label="Reference / Transaction ID" value={form.reference_number} onChange={(e) => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="UPI ref / bank ref" />
+          <Textarea label="Notes" value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any additional notes..." />
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="ghost" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" loading={submitting}>Record Payment</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Receipt Modal */}
+      {receiptPayment && (
+        <Modal open={!!receiptPayment} onClose={() => setReceiptPayment(null)} title="Payment Receipt">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center mx-auto mb-3">
+              <Receipt size={28} className="text-white" />
+            </div>
+            <div className="font-display text-xl font-bold text-white mb-1">Payment Confirmed</div>
+            <div className="text-navy-400 text-sm">RENFLIX Receipt</div>
+          </div>
+          <div className="bg-navy-900 rounded-xl p-4 flex flex-col gap-3 text-sm font-mono">
+            <ReceiptLine label="Amount" value={formatINR(receiptPayment.amount)} />
+            <ReceiptLine label="Tenant" value={tenants.find(t => t.id === receiptPayment.tenant_id)?.full_name || "—"} />
+            <ReceiptLine label="Method" value={receiptPayment.payment_method || "—"} />
+            {receiptPayment.reference_number && <ReceiptLine label="Ref" value={receiptPayment.reference_number} />}
+            <ReceiptLine label="Date" value={receiptPayment.paid_date ? new Date(receiptPayment.paid_date).toLocaleDateString("en-IN") : "—"} />
+            <ReceiptLine label="Status" value={receiptPayment.status} />
+          </div>
+          {receiptPayment.notes && <p className="text-xs text-navy-500 mt-3">{receiptPayment.notes}</p>}
+          <Button variant="ghost" className="w-full mt-4" onClick={() => setReceiptPayment(null)}>Close</Button>
+        </Modal>
+      )}
+
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
+}
+
+function ReceiptLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between items-center border-b border-navy-800 pb-2 last:border-0 last:pb-0">
+      <span className="text-navy-500">{label}</span>
+      <span className="text-white font-semibold">{value}</span>
+    </div>
+  );
+}

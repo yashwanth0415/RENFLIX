@@ -1,1 +1,10 @@
-{}
+{
+  "description": "RENFLIX is a streamlined platform for managing and sharing your favorite films and shows, enabling users to create personalized watchlists and connect with fellow enthusiasts.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
