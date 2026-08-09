@@ -74,17 +74,16 @@ export default function OnboardingPage() {
         orgId = orgData?.id || null;
       }
 
-      // Upsert profile
+      // Insert profile (no trigger creates it anymore)
       const { error: profileErr } = await supabase
         .from("profiles")
-        .upsert({
+        .insert({
           id: user.id,
           full_name: fullName.trim(),
           phone: phone.trim() || null,
           role,
           organization_id: orgId,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "id" });
+        });
 
       if (profileErr) throw new Error(profileErr.message);
 

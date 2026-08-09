@@ -33,10 +33,10 @@ async function runSQL(sql: string): Promise<{ ok: boolean; error?: string }> {
   return { ok: false, error: body };
 }
 
-app.get("/make-server-e5ba9b74/health", (c) => c.json({ status: "ok" }));
+app.get("/health", (c) => c.json({ status: "ok" }));
 
 // Run DB migration — idempotent, safe to call multiple times
-app.post("/make-server-e5ba9b74/setup-db", async (c) => {
+app.post("/setup-db", async (c) => {
   const steps = [
     `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`,
 
