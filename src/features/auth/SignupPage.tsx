@@ -54,35 +54,26 @@ export default function SignupPage() {
   }
 
   // Social OAuth signup – same as login, leads to onboarding if new
-  async function signUpWithGoogle() {
-  setError("");
-  setSubmitting(true);
-
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+  async function signUpWithProvider(provider: "google" | "apple") {
+    setError("");
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
       options: {
-        redirectTo: "https://renflix.onrender.com/auth/callback",
+        redirectTo: `${window.location.origin}/auth/callback`,
+        ...(provider === "google" && {
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        }),
       },
     });
 
     if (error) {
-      throw error;
+      setError(error.message);
     }
-
-    // Supabase redirects automatically.
-  } catch (error) {
-    console.error("Google sign-up error:", error);
-
-    setSubmitting(false);
-
-    setError(
-      error instanceof Error
-        ? error.message
-        : "Unable to sign up with Google."
-    );
+    // Redirect happens automatically
   }
-}
 
   if (success) {
     return (
@@ -200,7 +191,7 @@ export default function SignupPage() {
           <div className="flex flex-col gap-3 mb-6">
             <button
               type="button"
-              onClick={signUpWithGoogle}
+              onClick={() => signUpWithProvider("google")}
               className="flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition-colors"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">

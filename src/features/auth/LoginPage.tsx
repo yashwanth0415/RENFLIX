@@ -48,35 +48,26 @@ export default function LoginPage() {
   }
 
   // Social OAuth login
-  async function signInWithGoogle() {
-  setError("");
-  setSubmitting(true);
-
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+  async function signInWithProvider(provider: "google" | "apple") {
+    setError("");
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
       options: {
-        redirectTo: "https://renflix.onrender.com/auth/callback",
+        redirectTo: `${window.location.origin}/auth/callback`,
+        ...(provider === "google" && {
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        }),
       },
     });
 
     if (error) {
-      throw error;
+      setError(error.message);
     }
-
-    // Supabase redirects automatically.
-  } catch (error) {
-    console.error("Google sign-in error:", error);
-
-    setSubmitting(false);
-
-    setError(
-      error instanceof Error
-        ? error.message
-        : "Unable to sign in with Google."
-    );
+    // No manual navigation – Supabase redirects the browser
   }
-}
 
   return (
     <div className="min-h-screen bg-navy-950 flex items-center justify-center p-4">
@@ -174,7 +165,7 @@ export default function LoginPage() {
           <div className="flex flex-col gap-3 mb-6">
             <button
               type="button"
-              onClick={signInWithGoogle}
+              onClick={() => signInWithProvider("google")}
               className="flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition-colors"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
