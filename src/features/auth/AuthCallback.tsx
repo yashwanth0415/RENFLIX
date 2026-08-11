@@ -1,30 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../lib/supabase";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-
   const [message, setMessage] = useState("Completing sign in…");
 
-  const handledRef = useRef(false);
-
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
 
-    const goToNextPage = async () => {
-      // Prevent the callback from running twice
-      if (handledRef.current) return;
-
-      handledRef.current = true;
-
+    const handleAuth = async () => {
       try {
-        setMessage("Checking your account…");
+        setMessage("Checking your Google account…");
 
-        /*
-         * Supabase automatically processes the OAuth tokens
-         * from the URL hash and creates the browser session.
-         */
+        // Give Supabase a moment to process the OAuth URL.
         const {
           data: { session },
           error: sessionError,
@@ -35,20 +24,17 @@ export default function AuthCallback() {
         }
 
         if (!session) {
-          throw new Error("No Supabase session found.");
+          throw new Error("No authenticated session found.");
         }
 
         const userId = session.user.id;
 
-        console.log("Authenticated Google user:", session.user.email);
-        console.log("Supabase user ID:", userId);
+        console.log("Authenticated user:", session.user.email);
+        console.log("User ID:", userId);
 
-        setMessage("Checking your RENFLIX account…");
+        setMessage("Checking your RENFLIX profile…");
 
-        /*
-         * Check whether this authenticated user already
-         * has a profile in the profiles table.
-         */
+        // Check if this user already has a profile.
         const {
           data: profile,
           error: profileError,
@@ -62,15 +48,11 @@ export default function AuthCallback() {
           throw profileError;
         }
 
-        if (!mounted) return;
+        if (!isMounted) return;
 
-        /*
-         * EXISTING USER
-         *
-         * profiles.id exists and matches auth.users.id
-         */
+        // Existing user
         if (profile) {
-          console.log("Existing RENFLIX user → Dashboard");
+          console.log("Existing user → Dashboard");
 
           navigate("/dashboard", {
             replace: true,
@@ -79,28 +61,21 @@ export default function AuthCallback() {
           return;
         }
 
-        /*
-         * NEW USER
-         *
-         * Google authentication succeeded, but
-         * there is no profile yet.
-         */
-        console.log("New RENFLIX user → Onboarding");
+        // New user
+        console.log("New user → Onboarding");
 
         navigate("/onboarding", {
           replace: true,
         });
       } catch (error) {
-        console.error("RENFLIX authentication error:", error);
+        console.error("Auth callback error:", error);
 
-        if (!mounted) return;
+        if (!isMounted) return;
 
-        handledRef.current = false;
-
-        setMessage("Sign in could not be completed.");
+        setMessage("Sign in failed. Redirecting to login…");
 
         setTimeout(() => {
-          if (mounted) {
+          if (isMounted) {
             navigate("/login", {
               replace: true,
             });
@@ -109,36 +84,10 @@ export default function AuthCallback() {
       }
     };
 
-    /*
-     * Listen for the Supabase authentication event.
-     *
-     * This is useful for OAuth because the session may be
-     * established while the callback page is loading.
-     */
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Supabase auth event:", event);
-
-      if (
-        (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
-        session
-      ) {
-        goToNextPage();
-      }
-    });
-
-    /*
-     * Also check the current session immediately.
-     *
-     * This handles cases where Supabase has already processed
-     * the OAuth hash before the listener is attached.
-     */
-    goToNextPage();
+    handleAuth();
 
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      isMounted = false;
     };
   }, [navigate]);
 
