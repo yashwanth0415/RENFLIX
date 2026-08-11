@@ -1,16 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { projectId, publicAnonKey } from "../../utils/supabase/info";
 
 export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
+  `https://${projectId}.supabase.co`,
+  publicAnonKey,
   {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true,
     },
   }
 );
+
+export type SupabaseClient = typeof supabase;
