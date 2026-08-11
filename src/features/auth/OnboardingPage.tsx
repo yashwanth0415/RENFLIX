@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Home, Check, ArrowRight, ArrowLeft, X } from "lucide-react";
+import { Home, Check, ArrowRight, ArrowLeft } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import { ensureDbReady } from "../../lib/setupDb";
@@ -34,6 +34,7 @@ export default function OnboardingPage() {
   const totalSteps = needsOrg ? 3 : 2;
 
   useEffect(() => {
+    // Ensure DB is ready before onboarding submits
     ensureDbReady().then((r) => setSetupReady(r.ok));
   }, []);
 
@@ -46,12 +47,6 @@ export default function OnboardingPage() {
     setStep((s) => Math.max(s - 1, 1) as Step);
   }
 
-  // Cancel onboarding – sign out and go to signup
-  async function handleCancel() {
-    await supabase.auth.signOut();
-    navigate("/signup", { replace: true });
-  }
-
   async function handleFinish() {
     if (!user) return;
     if (!fullName.trim()) { setError("Please enter your full name."); return; }
@@ -59,6 +54,7 @@ export default function OnboardingPage() {
     setSubmitting(true);
 
     try {
+      // Ensure DB is set up
       if (!setupReady) {
         const r = await ensureDbReady();
         if (!r.ok) throw new Error("Database not ready: " + r.message);
@@ -66,6 +62,7 @@ export default function OnboardingPage() {
 
       let orgId: string | null = null;
 
+      // Create org if needed
       if (needsOrg && orgName.trim()) {
         const { data: orgData, error: orgErr } = await supabase
           .from("organizations")
@@ -77,6 +74,7 @@ export default function OnboardingPage() {
         orgId = orgData?.id || null;
       }
 
+      // Insert profile (no trigger creates it anymore)
       const { error: profileErr } = await supabase
         .from("profiles")
         .insert({
@@ -89,8 +87,10 @@ export default function OnboardingPage() {
 
       if (profileErr) throw new Error(profileErr.message);
 
+      // Refresh the profile in auth context
       await refreshProfile();
 
+      // Show success screen then redirect
       setDone(true);
       setSubmitting(false);
       setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
@@ -113,14 +113,6 @@ export default function OnboardingPage() {
           backgroundSize: "24px 24px",
         }}
       />
-
-      {/* Cancel button (top right) */}
-      <button
-        onClick={handleCancel}
-        className="fixed top-6 right-6 z-50 flex items-center gap-1.5 text-sm text-navy-400 hover:text-white transition-colors bg-navy-900/80 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10"
-      >
-        <X size={16} /> Cancel
-      </button>
 
       <div className="relative w-full max-w-lg">
         {/* Logo */}
@@ -320,7 +312,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Success state */}
+        {/* Success state — shown after submit completes */}
         {done && (
           <div key="success" className="animate-scale-in flex flex-col items-center py-12 gap-5">
             <div className="w-20 h-20 rounded-full bg-emerald-600/20 border-2 border-emerald-500 flex items-center justify-center">
