@@ -15,23 +15,17 @@ const ROLES: { value: UserRole; label: string }[] = [
 ];
 
 export default function SettingsPage() {
-  const { profile, user, refreshProfile } = useAuth();
+  const { profile, user } = useAuth();
   const [tab, setTab] = useState<"profile" | "org" | "security">("profile");
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "" });
   const [orgForm, setOrgForm] = useState({ name: "" });
   const [passwordForm, setPasswordForm] = useState({ password: "", confirm: "" });
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
-  
-  // Role change state
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole>(profile?.role || "OWNER");
-  const [roleConfirmError, setRoleConfirmError] = useState("");
 
   useEffect(() => {
     if (profile) {
       setProfileForm({ full_name: profile.full_name || "", phone: profile.phone || "" });
-      setSelectedRole(profile.role as UserRole);
     }
   }, [profile]);
 
@@ -45,11 +39,7 @@ export default function SettingsPage() {
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    const { error } = await supabase.from("profiles").update({ 
-      full_name: profileForm.full_name, 
-      phone: profileForm.phone, 
-      updated_at: new Date().toISOString() 
-    }).eq("id", user!.id);
+    const { error } = await supabase.from("profiles").update({ full_name: profileForm.full_name, phone: profileForm.phone, updated_at: new Date().toISOString() }).eq("id", user!.id);
     if (error) setToast({ msg: error.message, type: "error" });
     else setToast({ msg: "Profile updated!", type: "success" });
     setSubmitting(false);
@@ -72,29 +62,6 @@ export default function SettingsPage() {
     const { error } = await supabase.auth.updateUser({ password: passwordForm.password });
     if (error) setToast({ msg: error.message, type: "error" });
     else { setToast({ msg: "Password updated!", type: "success" }); setPasswordForm({ password: "", confirm: "" }); }
-    setSubmitting(false);
-  }
-
-  // Handle role change confirmation
-  async function confirmRoleChange() {
-    if (!user || !profile) return;
-    if (selectedRole === profile.role) {
-      setShowRoleModal(false);
-      return;
-    }
-    setSubmitting(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role: selectedRole, updated_at: new Date().toISOString() })
-      .eq("id", user.id);
-    if (error) {
-      setRoleConfirmError(error.message);
-      setSubmitting(false);
-      return;
-    }
-    await refreshProfile(); // Update context, dashboard will adapt
-    setShowRoleModal(false);
-    setToast({ msg: `Role changed to ${ROLES.find(r => r.value === selectedRole)?.label}.`, type: "success" });
     setSubmitting(false);
   }
 
@@ -138,55 +105,9 @@ export default function SettingsPage() {
             </div>
             <Input label="Full name" value={profileForm.full_name} onChange={(e) => setProfileForm(f => ({ ...f, full_name: e.target.value }))} />
             <Input label="Phone" type="tel" value={profileForm.phone} onChange={(e) => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
-            
-            {/* Role change trigger */}
-            <div className="pt-2 border-t border-navy-700">
-              {/*<p className="text-sm text-navy-400 mb-1">Current role: <span className="text-white font-semibold">{ROLES.find(r => r.value === profile?.role)?.label}</span></p>*/}
-              <button
-                type="button"
-                onClick={() => { setSelectedRole(profile?.role as UserRole || "OWNER"); setShowRoleModal(true); }}
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                Change role
-              </button>
-            </div>
-            
             <Button type="submit" loading={submitting} className="self-start">Save changes</Button>
           </form>
         </Card>
-      )}
-
-      {/* Role change modal */}
-      {showRoleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-navy-800 border border-navy-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-lg font-display font-bold text-white mb-2">Change your role</h3>
-            <p className="text-sm text-navy-400 mb-4">Select a new role. This will update your dashboard experience.</p>
-            <Select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-              options={ROLES.map(r => ({ value: r.value, label: r.label }))}
-              className="mb-4"
-            />
-            {roleConfirmError && <p className="text-xs text-red-400 mb-2">{roleConfirmError}</p>}
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowRoleModal(false)}
-                className="px-4 py-2 rounded-lg bg-navy-700 text-navy-300 hover:bg-navy-600 transition-colors text-sm"
-              >
-                Cancel
-              </button>
-              <Button
-                onClick={confirmRoleChange}
-                loading={submitting}
-                disabled={selectedRole === profile?.role}
-                className="px-4 py-2 rounded-lg text-sm"
-              >
-                Confirm change
-              </Button>
-            </div>
-          </div>
-        </div>
       )}
 
       {tab === "org" && (
