@@ -518,7 +518,7 @@ export default function LandingPage() {
 
       {/* ─── PWA INSTALL BUTTON ─── */}
       {deferredPrompt && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-left">
           <button
             onClick={handleInstallClick}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-full shadow-lg shadow-blue-600/30 font-semibold text-sm transition-all active:scale-95"
