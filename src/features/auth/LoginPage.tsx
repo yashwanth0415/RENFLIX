@@ -162,7 +162,7 @@ export default function LoginPage() {
           </div>
 
           {/* Social sign‑in buttons */}
-          {/*<div className="flex flex-col gap-3 mb-6">
+          <div className="flex flex-col gap-3 mb-6">
             <button
               type="button"
               onClick={() => signInWithProvider("google")}
@@ -186,17 +186,17 @@ export default function LoginPage() {
               </svg>
               Sign in with Apple
             </button>
-          </div>*/}
+          </div>
 
           {/* Divider */}
-          {/*<div className="relative mb-6">
+          <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-navy-600" />
             </div>
             <div className="relative flex justify-center text-xs">
               <span className="bg-navy-950 px-2 text-navy-500">or continue with email</span>
             </div>
-          </div>*/}
+          </div>
 
           {/* Email/password form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
