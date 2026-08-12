@@ -1,37 +1,37 @@
 {
-  "name": "RENFLIX — Property OS",
+  "name": "RENFLIX",
   "short_name": "RENFLIX",
-  "description": "Every Property. One Powerful Platform. Manage. Rent. Maintain. Grow.",
+  "description": "Every Property. One Powerful Platform.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0f1e",
+  "background_color": "#ffffff",
   "theme_color": "#1d4ed8",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.ico",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/x-icon",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/favicon.ico",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/x-icon",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-    "src": "/favicon.ico",
-    "sizes": "64x64 32x32 24x24 16x16",
-    "type": "image/x-icon",
-    "purpose": "any maskable"
-  }
-  ],
-  "categories": ["business", "productivity", "finance"]
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
