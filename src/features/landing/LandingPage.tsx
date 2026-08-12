@@ -524,7 +524,7 @@ export default function LandingPage() {
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-full shadow-lg shadow-blue-600/30 font-semibold text-sm transition-all active:scale-95"
           >
             <Download size={18} />
-            Add to Home Screen
+            Install
           </button>
         </div>
       )}
