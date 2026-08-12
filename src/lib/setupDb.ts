@@ -1,7 +1,7 @@
 import { projectId } from "../../utils/supabase/info";
 import { supabase } from "./supabase";
 
-const SERVER_BASE = `https://${projectId}.supabase.co/functions/v1/server`;
+const SERVER_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-e5ba9b74`;
 const SETUP_KEY = "renflix_db_ready_v3";
 
 /** Returns true if the profiles table exists and is accessible */

@@ -15,8 +15,8 @@ app.use("/*", cors({
   maxAge: 600,
 }));
 
-const SUPABASE_URL = () => Deno.env.get("FUNCTION_SUPABASE_URL")!;
-const SERVICE_KEY = () => Deno.env.get("FUNCTION_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL = () => Deno.env.get("SUPABASE_URL")!;
+const SERVICE_KEY = () => Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 async function runSQL(sql: string): Promise<{ ok: boolean; error?: string }> {
   const res = await fetch(`${SUPABASE_URL()}/rest/v1/sql`, {
@@ -33,10 +33,10 @@ async function runSQL(sql: string): Promise<{ ok: boolean; error?: string }> {
   return { ok: false, error: body };
 }
 
-app.get("/health", (c) => c.json({ status: "ok" }));
+app.get("/make-server-e5ba9b74/health", (c) => c.json({ status: "ok" }));
 
 // Run DB migration — idempotent, safe to call multiple times
-app.post("/setup-db", async (c) => {
+app.post("/make-server-e5ba9b74/setup-db", async (c) => {
   const steps = [
     `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`,
 
