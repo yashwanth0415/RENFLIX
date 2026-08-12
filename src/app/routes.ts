@@ -1,10 +1,15 @@
-import { createBrowserRouter, redirect } from "react-router";
-
-// Lazy imports for better performance
+// src/app/routes.ts
+import { createBrowserRouter } from "react-router";
 import AppShell from "../components/layout/AppShell";
+
+// Public pages
+import LandingPage from "../features/landing/LandingPage";
 import LoginPage from "../features/auth/LoginPage";
 import SignupPage from "../features/auth/SignupPage";
 import OnboardingPage from "../features/auth/OnboardingPage";
+import AuthCallback from "../features/auth/AuthCallback";
+
+// Authenticated pages
 import DashboardPage from "../features/dashboard/DashboardPage";
 import PropertiesPage from "../features/properties/PropertiesPage";
 import UnitsPage from "../features/units/UnitsPage";
@@ -15,10 +20,15 @@ import MaintenancePage from "../features/maintenance/MaintenancePage";
 import MessagesPage from "../features/messaging/MessagesPage";
 import AnalyticsPage from "../features/analytics/AnalyticsPage";
 import CommunityPage from "../features/community/CommunityPage";
-import SettingsPage from "../features/settings/SettingsPage";
 import IntelligencePage from "../features/intelligence/IntelligencePage";
+import SettingsPage from "../features/settings/SettingsPage";
 
 export const router = createBrowserRouter([
+  // ─── Public routes ──────────────────────────────────────
+  {
+    path: "/",
+    Component: LandingPage,
+  },
   {
     path: "/login",
     Component: LoginPage,
@@ -32,10 +42,15 @@ export const router = createBrowserRouter([
     Component: OnboardingPage,
   },
   {
-    path: "/",
-    Component: AppShell,
+    path: "/auth/callback",
+    Component: AuthCallback,
+  },
+
+  // ─── Authenticated routes ──────────────────────────────
+  // Use Component instead of element to avoid JSX in .ts
+  {
+    Component: AppShell,   // <-- no angle brackets
     children: [
-      { index: true, loader: () => redirect("/dashboard") },
       { path: "dashboard", Component: DashboardPage },
       { path: "properties", Component: PropertiesPage },
       { path: "units", Component: UnitsPage },

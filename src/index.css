@@ -1,3 +1,4 @@
+/* ─── FONTS & TAILWIND IMPORTS ──────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import 'tailwindcss';
 
@@ -31,7 +32,6 @@
 }
 
 * { box-sizing: border-box; }
-
 html, body, #root { height: 100%; }
 
 body {
@@ -42,19 +42,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+/* ── Scrollbar ────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; transition: background 0.2s; }
 ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-/* ── Fonts ──────────────────────────────────────────────────────────────────── */
+/* ── Fonts ─────────────────────────────────────────────────────────── */
 .font-display { font-family: var(--font-display); }
 .font-mono { font-family: var(--font-mono); }
 
-/* ── Keyframes ──────────────────────────────────────────────────────────────── */
+/* ── KEYFRAMES ─────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInSlow {
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeInFast {
@@ -93,10 +97,6 @@ body {
   0%, 100% { transform: translateY(0); }
   50%       { transform: translateY(-6px); }
 }
-@keyframes checkmark {
-  from { stroke-dashoffset: 24; }
-  to   { stroke-dashoffset: 0; }
-}
 @keyframes progressBar {
   from { width: 0%; }
   to   { width: 100%; }
@@ -109,9 +109,27 @@ body {
   0%   { transform: scale(0); opacity: 0.6; }
   100% { transform: scale(4); opacity: 0; }
 }
+@keyframes landingFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes landingGlow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.7; }
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
 
-/* ── Animation Classes ─────────────────────────────────────────────────────── */
+/* ── ANIMATION CLASSES ─────────────────────────────────────────────── */
 .animate-fade-in        { animation: fadeIn 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-fade-in-slow   { animation: fadeInSlow 0.9s cubic-bezier(0.16,1,0.3,1) both; }
 .animate-fade-in-fast   { animation: fadeInFast 0.2s ease-out both; }
 .animate-slide-in-left  { animation: slideInLeft 0.3s cubic-bezier(0.16,1,0.3,1) both; }
 .animate-slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.16,1,0.3,1) both; }
@@ -120,6 +138,31 @@ body {
 .animate-pulse-glow     { animation: pulseGlow 2s ease-in-out infinite; }
 .animate-spin           { animation: spin 0.8s linear infinite; }
 .animate-bounce-slow    { animation: bounce 1.5s ease-in-out infinite; }
+.animate-slide-up       { animation: slideUp 0.5s ease-out; }
+
+/* Landing floating particles */
+.landing-float { animation: landingFloat 5s ease-in-out infinite; }
+.landing-glow  { animation: landingGlow 4s ease-in-out infinite; }
+
+/* Gradient text */
+.gradient-text,
+.hero-gradient-text {
+  background: linear-gradient(135deg, #60a5fa, #a78bfa, #38bdf8, #818cf8);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 6s ease infinite;
+}
+.hero-gradient-text {
+  background: linear-gradient(135deg, #93c5fd, #c4b5fd, #67e8f9, #a5b4fc);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 4s ease infinite;
+  text-shadow: 0 0 30px rgba(96, 165, 250, 0.3);
+}
 
 /* Staggered children */
 .stagger-children > * { opacity: 0; animation: slideInUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
@@ -132,14 +175,50 @@ body {
 .stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
 .stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
 
-/* ── Skeleton shimmer ────────────────────────────────────────────────────────── */
+/* ── Scroll‑reveal animations ──────────────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.stagger-child {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.stagger-child.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Page transitions (for React Router) ──────────────────────────── */
+.page-enter {
+  animation: fadeInSlow 0.5s cubic-bezier(0.16,1,0.3,1) both;
+}
+.page-exit {
+  animation: fadeInFast 0.15s ease-out reverse both;
+}
+
+/* ── Glass header hover glow ───────────────────────────────────────── */
+header .backdrop-blur-xl {
+  transition: box-shadow 0.3s ease;
+}
+header .backdrop-blur-xl:hover {
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08), 0 0 20px rgba(59,130,246,0.2);
+}
+
+/* ── Skeleton shimmer ──────────────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
   background-size: 400px 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
 
-/* ── Glass ──────────────────────────────────────────────────────────────────── */
+/* ── Glass utility ─────────────────────────────────────────────────── */
 .glass {
   background: rgba(15,23,42,0.6);
   backdrop-filter: blur(12px);
@@ -147,15 +226,7 @@ body {
   border: 1px solid rgba(51,65,85,0.4);
 }
 
-/* ── Gradient text ──────────────────────────────────────────────────────────── */
-.gradient-text {
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #818cf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ── Card hover ─────────────────────────────────────────────────────────────── */
+/* ── Card hover ────────────────────────────────────────────────────── */
 .card-hover {
   transition: transform 0.2s cubic-bezier(0.16,1,0.3,1),
               border-color 0.2s ease,
@@ -168,7 +239,7 @@ body {
 }
 .card-hover:active { transform: translateY(0); }
 
-/* ── Buttons ────────────────────────────────────────────────────────────────── */
+/* ── Buttons ───────────────────────────────────────────────────────── */
 .btn-primary {
   background: linear-gradient(135deg, #1d4ed8, #2563eb);
   color: white;
@@ -194,7 +265,7 @@ body {
 .btn-primary:hover::after { opacity: 1; }
 .btn-primary:active { transform: scale(0.97); box-shadow: none; }
 
-/* ── Status pill ────────────────────────────────────────────────────────────── */
+/* ── Status pill ───────────────────────────────────────────────────── */
 .status-pill {
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -207,7 +278,7 @@ body {
   white-space: nowrap;
 }
 
-/* ── Sidebar link ───────────────────────────────────────────────────────────── */
+/* ── Sidebar link ──────────────────────────────────────────────────── */
 .sidebar-link {
   display: flex;
   align-items: center;
@@ -245,12 +316,7 @@ body {
 }
 .sidebar-link.active::before { transform: scaleY(1); }
 
-/* ── Page transition ────────────────────────────────────────────────────────── */
-.page-enter {
-  animation: fadeIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
-}
-
-/* ── Input focus ring ───────────────────────────────────────────────────────── */
+/* ── Input focus ring ──────────────────────────────────────────────── */
 input, select, textarea {
   font-family: var(--font-body);
   transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
@@ -259,7 +325,7 @@ input:focus, select:focus, textarea:focus {
   outline: none;
 }
 
-/* ── Ripple effect ──────────────────────────────────────────────────────────── */
+/* ── Ripple effect ─────────────────────────────────────────────────── */
 .ripple {
   position: relative;
   overflow: hidden;
@@ -274,19 +340,19 @@ input:focus, select:focus, textarea:focus {
   pointer-events: none;
 }
 
-/* ── Progress bar ────────────────────────────────────────────────────────────── */
+/* ── Progress bar ───────────────────────────────────────────────────── */
 .progress-bar-fill {
   animation: progressBar 1s cubic-bezier(0.16,1,0.3,1) both;
 }
 
-/* ── Notification dot pulse ─────────────────────────────────────────────────── */
+/* ── Notification dot pulse ─────────────────────────────────────────── */
 @keyframes dotPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.6; transform: scale(1.3); }
 }
 .dot-pulse { animation: dotPulse 1.5s ease-in-out infinite; }
 
-/* ── Modal backdrop ──────────────────────────────────────────────────────────── */
+/* ── Modal backdrop ─────────────────────────────────────────────────── */
 .modal-backdrop {
   animation: fadeInFast 0.15s ease-out both;
 }
@@ -294,25 +360,35 @@ input:focus, select:focus, textarea:focus {
   animation: scaleIn 0.25s cubic-bezier(0.16,1,0.3,1) both;
 }
 
-/* ── Table row hover ─────────────────────────────────────────────────────────── */
-tr {
-  transition: background-color 0.12s ease;
-}
+/* ── Table row hover ────────────────────────────────────────────────── */
+tr { transition: background-color 0.12s ease; }
 
-/* ── Toast ───────────────────────────────────────────────────────────────────── */
+/* ── Toast ──────────────────────────────────────────────────────────── */
 .toast-enter {
   animation: slideInRight 0.3s cubic-bezier(0.16,1,0.3,1) both;
 }
 
-/* ── Number counter ──────────────────────────────────────────────────────────── */
+/* ── Number counter ─────────────────────────────────────────────────── */
 .count-up {
   animation: countUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
 }
 
-/* ── Line clamp ──────────────────────────────────────────────────────────────── */
+/* ── Line clamp ─────────────────────────────────────────────────────── */
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
