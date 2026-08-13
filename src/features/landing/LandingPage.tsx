@@ -148,7 +148,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-5xl animate-fade-in-slow">
         <div
-          className={`backdrop-blur-xl bg-[#020617]/70 border border-white/[0.08] rounded-[30px] ${
+          className={`backdrop-blur-xl bg-[#020617]/70 border border-white/[0.08] rounded-[30px] shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.05)] ${
             mobileMenu ? "rounded-b-none" : ""
           }`}
         >
