@@ -153,7 +153,7 @@ export default function LandingPage() {
           }`}
         >
           <nav className="relative flex items-center justify-between px-6 py-4">
-            <Link to="/" className="flex items-center gap-3 group" aria-label="RENFLIX home">
+            <Link to="/" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-3 group" aria-label="RENFLIX home">
               <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-[0_0_25px_rgba(59,130,246,0.4)] group-hover:shadow-[0_0_40px_rgba(59,130,246,0.6)] transition-shadow overflow-hidden">
                 <img
                   src={logoSrc}
