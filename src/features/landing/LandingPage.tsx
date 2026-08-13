@@ -132,7 +132,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#020617] text-white overflow-x-hidden">
       {/* Background effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-64 left-1/2 -translate-x-1/2 w-[900px] h-[700px] rounded-full bg-blue-600/[0.08] blur-[140px]" />
+        <div className="hidden sm:block absolute -top-64 left-1/2 -translate-x-1/2 w-[900px] h-[700px] rounded-full bg-blue-600/[0.08] blur-[140px]" />
         <div className="absolute top-[900px] -left-80 w-[600px] h-[600px] rounded-full bg-violet-600/[0.06] blur-[130px]" />
         <div className="absolute top-[1800px] -right-80 w-[600px] h-[600px] rounded-full bg-blue-500/[0.05] blur-[130px]" />
         <div
@@ -146,7 +146,7 @@ export default function LandingPage() {
       </div>
 
       {/* Header */}
-      <header className="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-5xl animate-fade-in-slow">
+      <header className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-5xl animate-fade-in-slow">
         <div
           className={`backdrop-blur-xl bg-[#020617]/70 border border-white/[0.08] rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.05)] ${
             mobileMenu ? "rounded-b-none" : ""
@@ -199,17 +199,68 @@ export default function LandingPage() {
           </nav>
 
           {mobileMenu && (
-            <div className="md:hidden relative border-t border-white/[0.06] bg-[#020617]/95 backdrop-blur-xl px-5 py-5 rounded-b-2xl">
-              <div className="flex flex-col gap-1">
-                {[["features", "Features"], ["operations", "Operations"], ["insights", "Insights"], ["security", "Security"]].map(([id, label]) => (
-                  <button key={id} onClick={() => scrollTo(id)} className="text-left px-4 py-3 rounded-xl text-sm text-slate-300 hover:bg-white/[0.05]">{label}</button>
-                ))}
-                <div className="h-px bg-white/[0.06] my-2" />
-                <Link to="/login" onClick={() => setMobileMenu(false)} className="px-4 py-3 rounded-xl text-sm text-slate-300">Sign in</Link>
-                <Link to="/signup" onClick={() => setMobileMenu(false)} className="px-4 py-3 rounded-xl bg-blue-600 text-center text-sm font-semibold">Get started</Link>
-              </div>
-            </div>
-          )}
+  <div
+    className="
+      md:hidden
+      relative
+      z-[60]
+      border-t border-white/[0.08]
+      bg-[#020617]
+      px-5 py-5
+      rounded-b-2xl
+      shadow-[0_20px_50px_rgba(0,0,0,0.6)]
+    "
+  >
+    <div className="flex flex-col gap-1">
+      {[
+        ["features", "Features"],
+        ["operations", "Operations"],
+        ["insights", "Insights"],
+        ["security", "Security"],
+      ].map(([id, label]) => (
+        <button
+          key={id}
+          onClick={() => scrollTo(id)}
+          className="
+            text-left
+            px-4 py-3
+            rounded-xl
+            text-sm
+            text-slate-300
+            hover:bg-white/[0.05]
+          "
+        >
+          {label}
+        </button>
+      ))}
+
+      <div className="h-px bg-white/[0.06] my-2" />
+
+      <Link
+        to="/login"
+        onClick={() => setMobileMenu(false)}
+        className="px-4 py-3 rounded-xl text-sm text-slate-300"
+      >
+        Sign in
+      </Link>
+
+      <Link
+        to="/signup"
+        onClick={() => setMobileMenu(false)}
+        className="
+          px-4 py-3
+          rounded-xl
+          bg-blue-600
+          text-center
+          text-sm
+          font-semibold
+        "
+      >
+        Get started
+      </Link>
+    </div>
+  </div>
+)}
         </div>
       </header>
 
