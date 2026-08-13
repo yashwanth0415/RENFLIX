@@ -28,8 +28,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
-  { to: "/properties", icon: <Building2 size={18} />, label: "Properties", roles: ["OWNER", "PROPERTY_MANAGER", "ADMIN"] },
-  { to: "/units", icon: <DoorOpen size={18} />, label: "Units", roles: ["OWNER", "PROPERTY_MANAGER", "ADMIN"] },
+  { to: "/properties", icon: <Building2 size={18} />, label: "Properties", roles: ["OWNER", "PROPERTY_MANAGER", "ADMIN", "HOSTEL_MANAGER"] },
+  { to: "/units", icon: <DoorOpen size={18} />, label: "Units", roles: ["OWNER", "PROPERTY_MANAGER", "ADMIN","HOSTEL_MANAGER" ] },
   { to: "/tenants", icon: <Users size={18} />, label: "Tenants", roles: ["OWNER", "PROPERTY_MANAGER", "HOSTEL_MANAGER", "ADMIN"] },
   { to: "/leases", icon: <FileText size={18} />, label: "Leases", roles: ["OWNER", "PROPERTY_MANAGER", "ADMIN"] },
   { to: "/payments", icon: <CreditCard size={18} />, label: "Payments" },
