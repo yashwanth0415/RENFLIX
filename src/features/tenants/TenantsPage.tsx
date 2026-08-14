@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router";
 import { Users, Plus, Search, Phone, Mail } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import {
   Button, Card, StatusBadge, Modal, Input, Select, Textarea, PageHeader, EmptyState, Skeleton, Toast,
 } from "../../components/ui";
-import type { Tenant, TenantStatus, Unit } from "../../lib/types";
+import type { Tenant, TenantStatus, Unit, Property } from "../../lib/types";
 
 const defaultForm = {
   full_name: "",
@@ -22,6 +23,7 @@ export default function TenantsPage() {
   const { profile } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -29,16 +31,37 @@ export default function TenantsPage() {
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const { propertyId } = useParams<{ propertyId: string }>();
 
   useEffect(() => {
-    if (profile?.organization_id) fetchAll();
+    if (profile?.organization_id) {
+      if (propertyId) {
+        // Fetch units for specific property
+        async function fetchUnitsForProperty() {
+          const { data: unitData } = await supabase.from("units").select("*").eq("property_id", propertyId).eq("status", "AVAILABLE");
+          setUnits(unitData || []);
+        }
+        fetchUnitsForProperty();
+      }
+      fetchAll();
+    } else setLoading(false);
+  }, [profile, propertyId]);
+
+  async function fetchProperties() {
+    const { data } = await supabase.from("properties").select("*").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE");
+    setProperties(data || []);
+  }
+
+  useEffect(() => {
+    if (profile?.organization_id) fetchProperties();
     else setLoading(false);
   }, [profile]);
 
   async function fetchAll() {
-    const [tenRes, propRes] = await Promise.all([
+    const [tenRes, propRes, unitRes] = await Promise.all([
       supabase.from("tenants").select("*").eq("organization_id", profile!.organization_id!).order("created_at", { ascending: false }),
       supabase.from("properties").select("id").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE"),
+      propertyId ? supabase.from("units").select("*").eq("property_id", propertyId).eq("status", "AVAILABLE") : Promise.resolve({ data: [] }),
     ]);
     setTenants(tenRes.data || []);
 
@@ -47,8 +70,12 @@ export default function TenantsPage() {
       const { data: unitData } = await supabase.from("units").select("*").in("property_id", propIds).eq("status", "AVAILABLE");
       setUnits(unitData || []);
     }
-    setLoading(false);
-  }
+
+    // If specific propertyId, filter units to only that property
+    if (propertyId) {
+      const { data: filteredUnits } = await supabase.from("units").select("*").eq("property_id", propertyId).eq("status", "AVAILABLE");
+      setUnits(filteredUnits || []);
+    }
 
   function openAdd() {
     setEditTenant(null);
@@ -69,6 +96,11 @@ export default function TenantsPage() {
       status: t.status,
     });
     setShowModal(true);
+  }
+
+  function openTenant(tenantId: string) {
+    // Will show tenant details at top of page
+    // The router will render TenantsPage with tenantId param
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -124,6 +156,41 @@ export default function TenantsPage() {
         }
       />
 
+      {/* Tenant Detail Section */}
+      {propertyId && editTenant && (
+        <div className="bg-navy-800 border border-navy-700 rounded-2xl p-6 mb-6 animate-fade-in">
+          <div className="flex items-center gap-3 mb-4">
+            <Users size={20} className="text-violet-400" />
+            <div>
+              <h2 className="font-display font-bold text-2xl text-white">
+                {editTenant.full_name}
+              </h2>
+              <div className="text-sm text-navy-400">
+                {editTenant.phone || "No phone"}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-xs text-navy-500 uppercase tracking-wider">Status</div>
+              <StatusBadge status={editTenant.status} />
+            </div>
+            <div>
+              <div className="text-xs text-navy-500 uppercase tracking-wider">Unit</div>
+              <span className="font-medium text-white">
+                {editTenant.unit_id ? "Assigned" : "Not assigned"}
+              </span>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-navy-700/50">
+            <div className="text-xs text-navy-500 uppercase tracking-wider">Move-in Date</div>
+            <p className="text-navy-400 text-sm leading-relaxed">
+              {editTenant.move_in_date ? new Date(editTenant.move_in_date).toLocaleDateString("en-IN") : "Not set"}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="relative mb-5">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500" />
         <input
@@ -151,7 +218,7 @@ export default function TenantsPage() {
             <div
               key={t.id}
               className="bg-navy-800 border border-navy-700 rounded-xl p-4 card-hover group cursor-pointer"
-              onClick={() => openEdit(t)}
+              onClick={() => openTenant(t.id)}
             >
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
@@ -228,4 +295,4 @@ export default function TenantsPage() {
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
-}
+}}

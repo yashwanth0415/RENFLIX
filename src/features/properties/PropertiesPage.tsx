@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router";
 import { Building2, Plus, Search, MapPin, Grid, List } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -68,22 +69,41 @@ export default function PropertiesPage() {
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const { propertyId } = useParams<{ propertyId: string }>();
 
   useEffect(() => {
-    if (profile?.organization_id) fetchProperties();
-    else setLoading(false);
-  }, [profile]);
+    if (profile?.organization_id) {
+      if (propertyId) {
+        // Fetch specific property details
+        async function fetchPropertyDetails() {
+          const { data } = await supabase
+            .from("properties")
+            .select("*")
+            .eq("id", propertyId)
+            .single();
+          if (data) {
+            setEditProperty(data as Property);
+            setForm({
+              name: data.name,
+              property_type: data.property_type,
+              description: data.description || "",
+              address: data.address,
+              city: data.city,
+              state: data.state,
+              country: data.country,
+              postal_code: data.postal_code || "",
+              status: data.status,
+            });
+          }
+        }
+        fetchPropertyDetails();
+      } else {
+        fetchProperties();
+      }
+    } else setLoading(false);
+  }, [profile, propertyId]);
 
   async function fetchProperties() {
-    const { data } = await supabase
-      .from("properties")
-      .select("*")
-      .eq("organization_id", profile!.organization_id!)
-      .neq("status", "ARCHIVED")
-      .order("created_at", { ascending: false });
-    setProperties(data || []);
-    setLoading(false);
-  }
 
   function openAdd() {
     setEditProperty(null);
@@ -105,6 +125,13 @@ export default function PropertiesPage() {
       status: p.status,
     });
     setShowModal(true);
+  }
+
+  function openProperty(propertyId: string) {
+    // Navigate to property detail view - will show property at top of page
+    // The router will render PropertiesPage with propertyId param
+    // We just set the state to show the selected property
+    // No navigation needed since it's the same component with different params
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -165,6 +192,39 @@ export default function PropertiesPage() {
           </div>
         }
       />
+
+      {/* Property Detail Section */}
+      {propertyId && editProperty && (
+        <div className="bg-navy-800 border border-navy-700 rounded-2xl p-6 mb-6 animate-fade-in">
+          <div className="flex items-center gap-3 mb-4">
+            <Building2 size={20} className="text-blue-400" />
+            <div>
+              <h2 className="font-display font-bold text-2xl text-white">
+                {editProperty.name}
+              </h2>
+              <div className="text-sm text-navy-400">
+                {editProperty.city}, {editProperty.state}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-xs text-navy-500 uppercase tracking-wider">Status</div>
+              <StatusBadge status={editProperty.status} />
+            </div>
+            <div>
+              <div className="text-xs text-navy-500 uppercase tracking-wider">Type</div>
+              <span className="font-medium text-white">{editProperty.property_type.replace(/_/g, " ")}</span>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-navy-700/50">
+            <div className="text-xs text-navy-500 uppercase tracking-wider">Description</div>
+            <p className="text-navy-400 text-sm leading-relaxed">
+              {editProperty.description || "No description"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative mb-5">
@@ -290,10 +350,11 @@ export default function PropertiesPage() {
 function PropertyCard({ property: p, onEdit, onArchive }: { property: Property; onEdit: () => void; onArchive: () => void }) {
   const img = p.image_url || PROPERTY_IMAGES.DEFAULT;
   return (
-    <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden card-hover group">
+    <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden card-hover group" onClick={() => openProperty(p.id)} cursor="pointer">
       <div className="relative h-44 bg-navy-700">
         <img src={img} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
         <div className="absolute inset-0 bg-gradient-to-t from-navy-900/80 to-transparent" />
+        <div className="absolute inset-0"></div>
         <div className="absolute top-3 left-3">
           <StatusBadge status={p.status} />
         </div>

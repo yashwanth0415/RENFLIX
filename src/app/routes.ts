@@ -53,8 +53,10 @@ export const router = createBrowserRouter([
     children: [
       { path: "dashboard", Component: DashboardPage },
       { path: "properties", Component: PropertiesPage },
+      { path: "properties/:propertyId", Component: PropertiesPage },
       { path: "units", Component: UnitsPage },
       { path: "tenants", Component: TenantsPage },
+      { path: "tenants/:tenantId", Component: TenantsPage },
       { path: "leases", Component: LeasesPage },
       { path: "payments", Component: PaymentsPage },
       { path: "maintenance", Component: MaintenancePage },
