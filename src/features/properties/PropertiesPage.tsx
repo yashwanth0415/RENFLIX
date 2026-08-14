@@ -128,10 +128,9 @@ export default function PropertiesPage() {
   }
 
   function openProperty(propertyId: string) {
-    // Navigate to property detail view - will show property at top of page
-    // The router will render PropertiesPage with propertyId param
-    // We just set the state to show the selected property
-    // No navigation needed since it's the same component with different params
+    // Show property details at top of page by setting the selected property state
+    // The router param /properties/:propertyId will cause the property to render at top
+    setEditProperty(propertyId);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -350,7 +349,7 @@ export default function PropertiesPage() {
 function PropertyCard({ property: p, onEdit, onArchive }: { property: Property; onEdit: () => void; onArchive: () => void }) {
   const img = p.image_url || PROPERTY_IMAGES.DEFAULT;
   return (
-    <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden card-hover group" onClick={() => openProperty(p.id)} cursor="pointer">
+    <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden card-hover group cursor-pointer" onClick={() => openProperty(p.id)}>
       <div className="relative h-44 bg-navy-700">
         <img src={img} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
         <div className="absolute inset-0 bg-gradient-to-t from-navy-900/80 to-transparent" />

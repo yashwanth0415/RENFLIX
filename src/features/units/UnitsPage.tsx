@@ -54,7 +54,7 @@ export default function UnitsPage() {
       .select("id, name")
       .eq("organization_id", profile!.organization_id!)
       .eq("status", "ACTIVE");
-    setProperties(props || []);
+    setProperties((props || []) as Property[]);
 
     if (!props?.length) { setLoading(false); return; }
     const propIds = props.map((p) => p.id);
