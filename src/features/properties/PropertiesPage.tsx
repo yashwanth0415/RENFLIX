@@ -400,3 +400,4 @@ function PropertyRow({ property: p, onEdit, onArchive }: { property: Property; o
     </div>
   );
 }
+}
