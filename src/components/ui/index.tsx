@@ -394,6 +394,15 @@ export function Toast({ message, type = "info", onClose }: ToastProps) {
   );
 }
 
+// ── ScrollArea ────────────────────────────────────────────────────────────────
+export function ScrollArea({ children, className = "", maxHeight }: { children: React.ReactNode; className?: string; maxHeight?: string }) {
+  return (
+    <div className={`overflow-y-auto scrollbar-thin scrollbar-track-navy-900 scrollbar-thumb-navy-700 ${className}`} style={maxHeight ? { maxHeight } : {}}>
+      {children}
+    </div>
+  );
+}
+
 // ── Page Header ──────────────────────────────────────────────────────────────
 export function PageHeader({
   title,

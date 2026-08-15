@@ -24,6 +24,7 @@ import AnalyticsPage from "../features/analytics/AnalyticsPage";
 import CommunityPage from "../features/community/CommunityPage";
 import IntelligencePage from "../features/intelligence/IntelligencePage";
 import SettingsPage from "../features/settings/SettingsPage";
+import NotificationsPage from "../features/notifications/NotificationsPage";
 
 export const router = createBrowserRouter([
   // ─── Public routes ──────────────────────────────────────
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
       { path: "payments", Component: PaymentsPage },
       { path: "maintenance", Component: MaintenancePage },
       { path: "messages", Component: MessagesPage },
+      { path: "notifications", Component: NotificationsPage },
       { path: "analytics", Component: AnalyticsPage },
       { path: "community", Component: CommunityPage },
       { path: "intelligence", Component: IntelligencePage },

@@ -100,6 +100,7 @@ export default function UnitsPage() {
       monthly_rent: parseFloat(form.monthly_rent),
       security_deposit: form.security_deposit ? parseFloat(form.security_deposit) : null,
       status: form.status,
+      organization_id: profile!.organization_id!,
     };
 
     if (editUnit) {
