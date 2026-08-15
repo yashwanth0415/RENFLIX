@@ -79,7 +79,8 @@ export default function AppShell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const notifRefDesktop = useRef<HTMLDivElement>(null);
+  const notifRefMobile = useRef<HTMLDivElement>(null);
 
   // Fetch notifications on auth
   useEffect(() => {
@@ -148,7 +149,9 @@ export default function AppShell() {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      const clickedInsideDesktop = notifRefDesktop.current?.contains(e.target as Node);
+      const clickedInsideMobile = notifRefMobile.current?.contains(e.target as Node);
+      if (!clickedInsideDesktop && !clickedInsideMobile) {
         setNotifOpen(false);
       }
     }
@@ -204,7 +207,7 @@ export default function AppShell() {
           </button>
           <div className="font-display font-extrabold gradient-text text-lg">RENFLIX</div>
           {/* Mobile Notification Dropdown */}
-          <div className="relative" ref={notifRef}>
+          <div className="relative" ref={notifRefMobile}>
             <button onClick={toggleNotif} className="relative p-2 rounded-lg hover:bg-navy-700 text-navy-300 transition-all active:scale-90">
               <Bell size={20} />
               {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
@@ -282,7 +285,7 @@ export default function AppShell() {
           </div>
           <div className="flex items-center gap-3">
             {/* Notification Dropdown */}
-            <div className="relative" ref={notifRef}>
+            <div className="relative" ref={notifRefDesktop}>
               <button onClick={toggleNotif} className="relative p-2 rounded-lg hover:bg-navy-700 text-navy-400 hover:text-navy-200 transition-all active:scale-90">
                 <Bell size={18} />
                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
