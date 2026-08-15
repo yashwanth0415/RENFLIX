@@ -9,6 +9,7 @@ import {
   FileText,
   DoorOpen,
 } from "lucide-react";
+import { Link } from "react-router";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import { StatCard, Card, StatusBadge, Skeleton, PageHeader, EmptyState } from "../../components/ui";
@@ -197,7 +198,7 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display font-bold text-white">Recent Maintenance</h3>
-            <a href="/maintenance" className="text-xs text-blue-400 hover:text-blue-300">View all →</a>
+            <Link to="/maintenance" className="text-xs text-blue-400 hover:text-blue-300">View all →</Link>
           </div>
           {recentMaintenance.length === 0 ? (
             <EmptyState icon={<Wrench size={20} />} title="No maintenance requests" />

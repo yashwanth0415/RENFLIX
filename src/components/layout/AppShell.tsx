@@ -203,10 +203,75 @@ export default function AppShell() {
             <Menu size={20} />
           </button>
           <div className="font-display font-extrabold gradient-text text-lg">RENFLIX</div>
-          <button onClick={toggleNotif} className="relative p-2 rounded-lg hover:bg-navy-700 text-navy-300 transition-all active:scale-90">
-            <Bell size={20} />
-            {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-          </button>
+          {/* Mobile Notification Dropdown */}
+          <div className="relative" ref={notifRef}>
+            <button onClick={toggleNotif} className="relative p-2 rounded-lg hover:bg-navy-700 text-navy-300 transition-all active:scale-90">
+              <Bell size={20} />
+              {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            </button>
+            {notifOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 md:w-96 bg-navy-800 border border-navy-700 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b border-navy-700">
+                  <h3 className="font-display font-bold text-white">Notifications</h3>
+                  <div className="flex items-center gap-2">
+                    {unreadCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={markAllRead}>
+                        <Check size={12} /> Mark all read
+                      </Button>
+                    )}
+                    <button onClick={() => setNotifOpen(false)} className="text-navy-400 hover:text-white p-1.5 rounded-lg hover:bg-navy-700">
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+                <ScrollArea className="max-h-[400px]">
+                  {notifications.length === 0 ? (
+                    <div className="p-6 text-center text-navy-500">No notifications yet</div>
+                  ) : (
+                    <div className="divide-y divide-navy-700">
+                      {notifications.map((notif) => (
+                        <button
+                          key={notif.id}
+                          className={`w-full p-4 text-left hover:bg-navy-700/50 transition-colors ${!notif.read ? 'bg-navy-700/30' : ''}`}
+                          onClick={() => {
+                            if (!notif.read) markAsRead([notif.id]);
+                            if (notif.entity_type && notif.entity_id) {
+                              const routes: Record<string, string> = {
+                                property: `/properties/${notif.entity_id}`,
+                                tenant: `/tenants/${notif.entity_id}`,
+                                payment: `/payments`,
+                                maintenance: `/maintenance`,
+                                lease: `/leases`,
+                              };
+                              if (routes[notif.entity_type]) navigate(routes[notif.entity_type]);
+                            }
+                            setNotifOpen(false);
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getNotifIconColor(notif.type)}`}>
+                              {getNotifIcon(notif.type)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className={`font-semibold text-white ${!notif.read ? '' : 'text-navy-300'}`}>{notif.title}</div>
+                              <div className="text-xs text-navy-400 truncate">{notif.message}</div>
+                              <div className="text-[10px] text-navy-600 mt-1">{formatTime(notif.created_at)}</div>
+                            </div>
+                            {!notif.read && <div className="w-2 h-2 bg-blue-400 rounded-full mt-1 flex-shrink-0" />}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+                <div className="p-3 border-t border-navy-700">
+                  <Button variant="secondary" className="w-full" onClick={() => { setNotifOpen(false); navigate('/notifications'); }}>
+                    View All Notifications
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </header>
 
         {/* Desktop topbar */}
