@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
 
 // ── Button ──────────────────────────────────────────────────────────────────
@@ -244,18 +245,23 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, width = "max-w-lg" }: ModalProps) {
-  // ESC to close
+  // ESC to close & body scroll lock
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    // Prevent body scroll
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handler);
+      document.body.style.overflow = "";
+    };
   }, [open, onClose]);
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ overscrollBehavior: "contain" }}>
       <div
         className="absolute inset-0 bg-navy-950/85 backdrop-blur-sm modal-backdrop"
         onClick={onClose}
@@ -264,11 +270,11 @@ export function Modal({ open, onClose, title, children, width = "max-w-lg" }: Mo
         className={`relative bg-navy-800 border border-navy-700 rounded-2xl shadow-2xl w-full ${width} modal-content max-h-[90vh] overflow-y-auto`}
         style={{ boxShadow: "0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.1)" }}
       >
-        <div className="flex items-center justify-between p-5 border-b border-navy-700/70">
+        <div className="flex items-center justify-between p-5 border-b border-navy-700/70 sticky top-0 bg-navy-800 z-10">
           <h2 className="font-display text-base font-bold text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="text-navy-400 hover:text-white p-1.5 rounded-lg hover:bg-navy-700 transition-all active:scale-90"
+            className="text-navy-400 hover:text-white p-1.5 rounded-lg hover:bg-navy-700 transition-all active:scale-90 flex-shrink-0"
           >
             <X size={18} />
           </button>
@@ -277,6 +283,9 @@ export function Modal({ open, onClose, title, children, width = "max-w-lg" }: Mo
       </div>
     </div>
   );
+
+  // Render at document body to avoid containment from overflow ancestors
+  return createPortal(modalContent, document.body);
 }
 
 // ── Empty State ──────────────────────────────────────────────────────────────
