@@ -10,6 +10,8 @@ import {
   Edit,
   Building2,
   Home,
+  ArrowLeft,
+  Archive,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -154,6 +156,30 @@ export default function TenantDetailPage() {
     setShowModal(true);
   }
 
+  async function archiveTenant() {
+    if (!tenant) return;
+    if (!confirm("Archive this tenant? This will remove them from active listings.")) return;
+
+    try {
+      const { error } = await supabase
+        .from("tenants")
+        .update({ status: "FORMER", updated_at: new Date().toISOString() })
+        .eq("id", tenant.id);
+
+      if (error) throw error;
+
+      // Free up the unit if assigned
+      if (tenant.unit_id) {
+        await supabase.from("units").update({ status: "AVAILABLE" }).eq("id", tenant.unit_id);
+      }
+
+      setToast({ msg: "Tenant archived", type: "success" });
+      setTimeout(() => navigate("/tenants"), 1500);
+    } catch (err: any) {
+      setToast({ msg: err.message || "Failed to archive tenant", type: "error" });
+    }
+  }
+
   function closeModal() {
     setShowModal(false);
     setEditForm(null);
@@ -217,6 +243,14 @@ export default function TenantDetailPage() {
 
   return (
     <div className="animate-fade-in">
+      {/* Back Button */}
+      <div className="mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/tenants")} className="flex items-center gap-2">
+          <ArrowLeft size={16} />
+          Back to Tenants
+        </Button>
+      </div>
+
       {/* Tenant Profile Header */}
       <div className="bg-navy-800 border border-navy-700 rounded-2xl p-6 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div className="flex items-center gap-4">
@@ -241,6 +275,18 @@ export default function TenantDetailPage() {
                   <span>{tenant.email}</span>
                 </div>
               )}
+              {property && (
+                <div className="flex items-center gap-2">
+                  <Building2 size={16} />
+                  <span>{property.name}</span>
+                </div>
+              )}
+              {unit && (
+                <div className="flex items-center gap-2">
+                  <Home size={16} />
+                  <span>{unit.unit_number} {unit.unit_type ? `· ${unit.unit_type}` : ""}</span>
+                </div>
+              )}
               {tenant.emergency_contact_name && (
                 <div className="flex items-center gap-2">
                   <Users size={16} className="text-amber-400" />
@@ -255,60 +301,12 @@ export default function TenantDetailPage() {
             <Edit size={16} />
             Edit Profile
           </Button>
-          {unit && property && (
-            <Button variant="ghost" onClick={() => navigate(`/properties/${property.id}`)}>
-              <Building2 size={16} />
-              View Property
-            </Button>
-          )}
-          {unit && (
-            <Button variant="ghost" onClick={() => navigate(`/units/${unit.id}`)}>
-              <Home size={16} />
-              View Unit
-            </Button>
-          )}
+          <Button variant="danger" onClick={archiveTenant}>
+            <Archive size={16} />
+            Archive
+          </Button>
         </div>
       </div>
-
-      {/* Unit & Lease Info Row */}
-      {(unit || activeLease) && (
-        <Card className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-            {unit && (
-              <div className="flex items-center gap-3 p-3 bg-navy-700/50 rounded-xl">
-                <Home className="w-6 h-6 text-blue-400" />
-                <div>
-                  <div className="text-xs text-navy-400">Unit</div>
-                  <div className="font-semibold text-white">{unit.unit_number}</div>
-                  <div className="text-xs text-navy-500">{unit.unit_type || "Residential"} · {unit.area ? `${unit.area} sqft` : ""}</div>
-                </div>
-              </div>
-            )}
-            {activeLease && (
-              <div className="flex items-center gap-3 p-3 bg-navy-700/50 rounded-xl">
-                <FileText className="w-6 h-6 text-amber-400" />
-                <div>
-                  <div className="text-xs text-navy-400">Active Lease</div>
-                  <div className="font-semibold text-white">
-                    {new Date(activeLease.start_date).toLocaleDateString("en-IN")} — {new Date(activeLease.end_date).toLocaleDateString("en-IN")}
-                  </div>
-                  <div className="text-xs text-navy-500">Rent: {formatINR(activeLease.monthly_rent)}/mo</div>
-                </div>
-              </div>
-            )}
-            {activeLease && (
-              <div className="flex items-center gap-3 p-3 bg-navy-700/50 rounded-xl">
-                <CreditCard className="w-6 h-6 text-emerald-400" />
-                <div>
-                  <div className="text-xs text-navy-400">Security Deposit</div>
-                  <div className="font-semibold text-white">{formatINR(securityDeposit)}</div>
-                  <div className="text-xs text-navy-500">Due: {activeLease.payment_day}th of each month</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

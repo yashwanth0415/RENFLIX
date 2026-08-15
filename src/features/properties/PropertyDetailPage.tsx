@@ -11,6 +11,7 @@ import {
   DoorOpen,
   Edit,
   Archive,
+  ArrowLeft,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -257,6 +258,14 @@ export default function PropertyDetailPage() {
 
   return (
     <div className="animate-fade-in">
+      {/* Back Button */}
+      <div className="mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/properties")} className="flex items-center gap-2">
+          <ArrowLeft size={16} />
+          Back to Properties
+        </Button>
+      </div>
+
       {/* Property Image & Name - First */}
       <div className="relative h-72 bg-navy-700 overflow-hidden rounded-2xl mb-6">
         <img

@@ -194,18 +194,13 @@ export default function PropertiesPage() {
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((p) => (
-            <PropertyCard
-              key={p.id}
-              property={p}
-              onEdit={() => openEdit(p)}
-              onArchive={() => archiveProperty(p.id)}
-            />
+            <PropertyCard key={p.id} property={p} />
           ))}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map((p) => (
-            <PropertyRow key={p.id} property={p} onEdit={() => openEdit(p)} onArchive={() => archiveProperty(p.id)} />
+            <PropertyRow key={p.id} property={p} />
           ))}
         </div>
       )}
@@ -288,7 +283,7 @@ export default function PropertiesPage() {
   );
 }
 
-function PropertyCard({ property: p, onEdit, onArchive }: { property: Property; onEdit: () => void; onArchive: () => void }) {
+function PropertyCard({ property: p }: { property: Property }) {
   const navigate = useNavigate();
   const handleClick = () => navigate(`/properties/${p.id}`);
 
@@ -315,16 +310,12 @@ function PropertyCard({ property: p, onEdit, onArchive }: { property: Property; 
           <span>{p.city}, {p.state}</span>
         </div>
         <div className="text-xs text-navy-500 line-clamp-2 mb-4">{p.description || p.address}</div>
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button size="sm" variant="secondary" className="flex-1" onClick={onEdit}>Edit</Button>
-          <Button size="sm" variant="ghost" onClick={onArchive}>Archive</Button>
-        </div>
       </div>
     </div>
   );
 }
 
-function PropertyRow({ property: p, onEdit, onArchive }: { property: Property; onEdit: () => void; onArchive: () => void }) {
+function PropertyRow({ property: p }: { property: Property }) {
   const navigate = useNavigate();
   const handleClick = () => navigate(`/properties/${p.id}`);
 
@@ -345,10 +336,6 @@ function PropertyRow({ property: p, onEdit, onArchive }: { property: Property; o
         <div className="text-xs text-navy-400">{p.city} · {p.property_type.replace(/_/g, " ")}</div>
       </div>
       <StatusBadge status={p.status} />
-      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button size="sm" variant="secondary" onClick={onEdit}>Edit</Button>
-        <Button size="sm" variant="ghost" onClick={onArchive}>Archive</Button>
-      </div>
     </div>
   );
 }
