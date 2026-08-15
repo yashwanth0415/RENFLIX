@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   ArrowRight,
   BarChart3,
@@ -23,6 +23,7 @@ import {
   Database,
   Award,
 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 const logoSrc = "/logo.png";
 
@@ -98,6 +99,16 @@ const stats = [
 ];
 
 export default function LandingPage() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, loading, navigate]);
+
   const [mobileMenu, setMobileMenu] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 

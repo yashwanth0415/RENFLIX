@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router";
 import { Home, Eye, EyeOff, ArrowRight, Check, ArrowLeft } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -15,7 +15,12 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  if (!loading && user) return <Navigate to="/dashboard" replace />;
+  // Replace history entry if already authenticated - prevents back button to signup
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   const passwordStrength = (() => {
     if (password.length === 0) return 0;
