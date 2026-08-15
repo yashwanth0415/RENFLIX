@@ -55,10 +55,10 @@ export const router = createBrowserRouter([
     children: [
       { path: "dashboard", Component: DashboardPage },
       { path: "properties", Component: PropertiesPage },
-      { path: "properties/:propertyId", Component: PropertyDetailPage },
+      { path: "properties/:propertyDisplayId", Component: PropertyDetailPage },
       { path: "units", Component: UnitsPage },
       { path: "tenants", Component: TenantsPage },
-      { path: "tenants/:tenantId", Component: TenantDetailPage },
+      { path: "tenants/:tenantDisplayId", Component: TenantDetailPage },
       { path: "leases", Component: LeasesPage },
       { path: "payments", Component: PaymentsPage },
       { path: "maintenance", Component: MaintenancePage },

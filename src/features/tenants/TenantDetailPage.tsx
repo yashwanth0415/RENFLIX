@@ -39,7 +39,7 @@ function formatINR(amount: number): string {
 export default function TenantDetailPage() {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
-  const { tenantId } = useParams<{ tenantId: string }>();
+  const { tenantDisplayId } = useParams<{ tenantDisplayId: string }>();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -57,20 +57,20 @@ export default function TenantDetailPage() {
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
-    if (!tenantId || tenantId === "") {
+    if (!tenantDisplayId || tenantDisplayId === "") {
       setLoading(false);
       return;
     }
-    fetchTenant(tenantId);
-  }, [tenantId]);
+    fetchTenant(tenantDisplayId);
+  }, [tenantDisplayId]);
 
-  async function fetchTenant(id: string) {
+  async function fetchTenant(displayId: string) {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("tenants")
         .select("*")
-        .eq("id", id)
+        .eq("tenant_display_id", displayId)
         .single();
 
       if (error) throw error;
@@ -261,6 +261,9 @@ export default function TenantDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="font-display text-2xl font-bold text-white">{tenant.full_name}</h1>
               <StatusBadge status={tenant.status} />
+              {tenant.tenant_display_id && (
+                <span className="text-xs text-navy-500 bg-navy-700 px-2 py-0.5 rounded font-mono">ID: {tenant.tenant_display_id}</span>
+              )}
             </div>
             <div className="flex flex-wrap gap-4 text-sm text-navy-300 mt-2">
               {tenant.phone && (

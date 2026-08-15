@@ -63,7 +63,7 @@ function formatINR(amount: number): string {
 export default function PropertyDetailPage() {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
-  const { propertyId } = useParams<{ propertyId: string }>();
+  const { propertyDisplayId } = useParams<{ propertyDisplayId: string }>();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -81,20 +81,20 @@ export default function PropertyDetailPage() {
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
-    if (!propertyId || propertyId === "") {
+    if (!propertyDisplayId || propertyDisplayId === "") {
       setLoading(false);
       return;
     }
-    fetchProperty(propertyId);
-  }, [propertyId]);
+    fetchProperty(propertyDisplayId);
+  }, [propertyDisplayId]);
 
-  async function fetchProperty(id: string) {
+  async function fetchProperty(displayId: string) {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("properties")
         .select("*")
-        .eq("id", id)
+        .eq("property_display_id", displayId)
         .single();
 
       if (error) throw error;
@@ -281,6 +281,9 @@ export default function PropertyDetailPage() {
               <div className="flex items-center gap-3 mb-2">
                 <StatusBadge status={property.status} />
                 <span className="text-sm text-navy-300 font-mono uppercase">{property.property_type.replace(/_/g, " ")}</span>
+                {property.property_display_id && (
+                  <span className="text-xs text-navy-500 bg-navy-700 px-2 py-0.5 rounded font-mono">ID: {property.property_display_id}</span>
+                )}
               </div>
               <h1 className="font-display text-3xl font-bold text-white">{property.name}</h1>
               <div className="flex items-center gap-2 text-navy-300 mt-2">

@@ -67,6 +67,7 @@ export interface Property {
   longitude: number | null;
   image_url: string | null;
   status: PropertyStatus;
+  property_display_id: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -87,6 +88,7 @@ export interface Unit {
   monthly_rent: number;
   security_deposit: number | null;
   metadata: Record<string, unknown> | null;
+  property_display_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -106,6 +108,7 @@ export interface Tenant {
   unit_id: string | null;
   move_in_date: string | null;
   move_out_date: string | null;
+  tenant_display_id: string | null;
   created_at: string;
   updated_at: string;
 }

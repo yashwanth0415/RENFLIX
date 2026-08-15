@@ -181,7 +181,7 @@ export default function TenantsPage() {
             <div
               key={t.id}
               className="bg-navy-800 border border-navy-700 rounded-xl p-4 card-hover group cursor-pointer"
-              onClick={() => navigate(`/tenants/${t.id}`)}
+              onClick={() => navigate(`/tenants/${t.tenant_display_id || t.id}`)}
             >
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
@@ -204,6 +204,9 @@ export default function TenantsPage() {
                     <Mail size={11} />
                     <span className="truncate">{t.email}</span>
                   </div>
+                )}
+                {t.tenant_display_id && (
+                  <div className="text-xs text-navy-500 font-mono">ID: {t.tenant_display_id}</div>
                 )}
                 {t.move_in_date && (
                   <div className="text-xs text-navy-500 mt-1">

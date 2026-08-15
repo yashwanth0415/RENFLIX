@@ -285,7 +285,7 @@ export default function PropertiesPage() {
 
 function PropertyCard({ property: p }: { property: Property }) {
   const navigate = useNavigate();
-  const handleClick = () => navigate(`/properties/${p.id}`);
+  const handleClick = () => navigate(`/properties/${p.property_display_id || p.id}`);
 
   const img = p.image_url || PROPERTY_IMAGES.DEFAULT;
   return (
@@ -305,6 +305,9 @@ function PropertyCard({ property: p }: { property: Property }) {
       </div>
       <div className="p-4">
         <h3 className="font-display font-bold text-white text-base mb-1">{p.name}</h3>
+        {p.property_display_id && (
+          <div className="text-xs text-navy-500 bg-navy-700 px-2 py-0.5 rounded font-mono inline-block mb-2">ID: {p.property_display_id}</div>
+        )}
         <div className="flex items-center gap-1 text-xs text-navy-400 mb-3">
           <MapPin size={12} />
           <span>{p.city}, {p.state}</span>
@@ -317,7 +320,7 @@ function PropertyCard({ property: p }: { property: Property }) {
 
 function PropertyRow({ property: p }: { property: Property }) {
   const navigate = useNavigate();
-  const handleClick = () => navigate(`/properties/${p.id}`);
+  const handleClick = () => navigate(`/properties/${p.property_display_id || p.id}`);
 
   return (
     <div
@@ -334,6 +337,9 @@ function PropertyRow({ property: p }: { property: Property }) {
       <div className="flex-1 min-w-0">
         <div className="font-display font-semibold text-white text-sm">{p.name}</div>
         <div className="text-xs text-navy-400">{p.city} · {p.property_type.replace(/_/g, " ")}</div>
+        {p.property_display_id && (
+          <div className="text-xs text-navy-500 font-mono">ID: {p.property_display_id}</div>
+        )}
       </div>
       <StatusBadge status={p.status} />
     </div>
