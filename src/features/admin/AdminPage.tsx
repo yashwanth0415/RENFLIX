@@ -28,6 +28,8 @@ import {
   CheckCircle,
   XCircle,
   Bell,
+  Menu,
+  X,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -260,6 +262,7 @@ export default function AdminPage() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const tableConfig = TABLE_CONFIGS[activeTable];
   const filteredData = data.filter((row) =>
@@ -526,9 +529,18 @@ export default function AdminPage() {
 
   return (
     <div className="h-screen bg-navy-900 flex overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-navy-950/85 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-navy-950 border-r border-navy-800 flex flex-col">
-        <div className="p-5 border-b border-navy-800">
+      <aside className={`w-64 bg-navy-950 border-r border-navy-800 flex flex-col ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 z-50 lg:static lg:z-auto' : 'hidden lg:block'}`}>
+        <div className="p-5 border-b border-navy-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
               <Shield size={20} className="text-white" />
@@ -538,13 +550,21 @@ export default function AdminPage() {
               <p className="text-[10px] text-blue-400 font-mono">thurpatiyashwanth@gmail.com</p>
             </div>
           </div>
+          {/* Mobile close button */}
+          <button
+            className="lg:hidden p-2 rounded-lg hover:bg-navy-700 text-navy-300 hover:text-white transition-colors"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Close sidebar"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         <nav className="flex-1 p-3 overflow-y-auto">
           {Object.entries(TABLE_CONFIGS).map(([key, config]) => (
             <button
               key={key}
-              onClick={() => { setActiveTable(key as TableKey); setPage(1); setSearch(""); }}
+              onClick={() => { setActiveTable(key as TableKey); setPage(1); setSearch(""); setMobileSidebarOpen(false); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 activeTable === key
                   ? "bg-blue-500/15 text-blue-400 border border-blue-500/30"
@@ -566,6 +586,18 @@ export default function AdminPage() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-6">
+        {/* Mobile header with hamburger menu */}
+        <header className="lg:hidden mb-6 flex items-center justify-between">
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="p-2 rounded-lg hover:bg-navy-700 text-navy-300 transition-colors active:scale-90"
+            aria-label="Open sidebar"
+          >
+            <Menu size={24} />
+          </button>
+          <div className="font-display font-extrabold gradient-text text-lg">RENFLIX</div>
+          <div className="w-10" /> {/* spacer for alignment */}
+        </header>
         <div className="max-w-[1600px] mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
