@@ -12,8 +12,10 @@ import AuthCallback from "../features/auth/AuthCallback";
 // Authenticated pages
 import DashboardPage from "../features/dashboard/DashboardPage";
 import PropertiesPage from "../features/properties/PropertiesPage";
+import PropertyDetailPage from "../features/properties/PropertyDetailPage";
 import UnitsPage from "../features/units/UnitsPage";
 import TenantsPage from "../features/tenants/TenantsPage";
+import TenantDetailPage from "../features/tenants/TenantDetailPage";
 import LeasesPage from "../features/leases/LeasesPage";
 import PaymentsPage from "../features/payments/PaymentsPage";
 import MaintenancePage from "../features/maintenance/MaintenancePage";
@@ -53,10 +55,10 @@ export const router = createBrowserRouter([
     children: [
       { path: "dashboard", Component: DashboardPage },
       { path: "properties", Component: PropertiesPage },
-      { path: "properties/:propertyId", Component: PropertiesPage },
+      { path: "properties/:propertyId", Component: PropertyDetailPage },
       { path: "units", Component: UnitsPage },
       { path: "tenants", Component: TenantsPage },
-      { path: "tenants/:tenantId", Component: TenantsPage },
+      { path: "tenants/:tenantId", Component: TenantDetailPage },
       { path: "leases", Component: LeasesPage },
       { path: "payments", Component: PaymentsPage },
       { path: "maintenance", Component: MaintenancePage },

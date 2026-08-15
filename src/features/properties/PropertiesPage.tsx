@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { Building2, Plus, Search, MapPin, Grid, List } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -288,9 +289,15 @@ export default function PropertiesPage() {
 }
 
 function PropertyCard({ property: p, onEdit, onArchive }: { property: Property; onEdit: () => void; onArchive: () => void }) {
+  const navigate = useNavigate();
+  const handleClick = () => navigate(`/properties/${p.id}`);
+
   const img = p.image_url || PROPERTY_IMAGES.DEFAULT;
   return (
-    <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden card-hover group">
+    <div
+      className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden card-hover group"
+      onClick={handleClick}
+    >
       <div className="relative h-44 bg-navy-700">
         <img src={img} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
         <div className="absolute inset-0 bg-gradient-to-t from-navy-900/80 to-transparent" />
@@ -318,8 +325,14 @@ function PropertyCard({ property: p, onEdit, onArchive }: { property: Property; 
 }
 
 function PropertyRow({ property: p, onEdit, onArchive }: { property: Property; onEdit: () => void; onArchive: () => void }) {
+  const navigate = useNavigate();
+  const handleClick = () => navigate(`/properties/${p.id}`);
+
   return (
-    <div className="bg-navy-800 border border-navy-700 rounded-xl px-4 py-3 flex items-center gap-4 group card-hover">
+    <div
+      className="bg-navy-800 border border-navy-700 rounded-xl px-4 py-3 flex items-center gap-4 group card-hover"
+      onClick={handleClick}
+    >
       <div className="w-12 h-12 rounded-lg bg-navy-700 flex-shrink-0 overflow-hidden">
         <img
           src={p.image_url || PROPERTY_IMAGES.DEFAULT}

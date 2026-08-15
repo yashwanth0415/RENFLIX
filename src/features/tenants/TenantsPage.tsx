@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { Users, Plus, Search, Phone, Mail } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import {
   Button, Card, StatusBadge, Modal, Input, Select, Textarea, PageHeader, EmptyState, Skeleton, Toast,
 } from "../../components/ui";
-import type { Tenant, TenantStatus, Unit } from "../../lib/types";
+import type { Tenant, TenantStatus, Unit, Property } from "../../lib/types";
 
 const defaultForm = {
   full_name: "",
@@ -13,6 +14,7 @@ const defaultForm = {
   phone: "",
   emergency_contact_name: "",
   emergency_contact_phone: "",
+  property_id: "",
   unit_id: "",
   move_in_date: "",
   status: "ACTIVE" as TenantStatus,
@@ -20,8 +22,11 @@ const defaultForm = {
 
 export default function TenantsPage() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [filteredUnits, setFilteredUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -35,18 +40,32 @@ export default function TenantsPage() {
     else setLoading(false);
   }, [profile]);
 
+  // Filter units based on selected property
+  useEffect(() => {
+    if (form.property_id) {
+      const unitsForProperty = units.filter(u => u.property_id === form.property_id && u.status === "AVAILABLE");
+      setFilteredUnits(unitsForProperty);
+    } else {
+      setFilteredUnits([]);
+    }
+    // Reset unit selection when property changes
+    if (form.unit_id && !filteredUnits.find(u => u.id === form.unit_id)) {
+      setForm(f => ({ ...f, unit_id: "" }));
+    }
+  }, [form.property_id, units]);
+
   async function fetchAll() {
-    const [tenRes, propRes] = await Promise.all([
+    const [tenRes, propRes, unitRes] = await Promise.all([
       supabase.from("tenants").select("*").eq("organization_id", profile!.organization_id!).order("created_at", { ascending: false }),
-      supabase.from("properties").select("id").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE"),
+      supabase.from("properties").select("*").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE"),
+      supabase.from("units").select("*").in(
+        "property_id",
+        (await supabase.from("properties").select("id").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE")).data?.map(p => p.id) || []
+      ),
     ]);
     setTenants(tenRes.data || []);
-
-    const propIds = (propRes.data || []).map((p) => p.id);
-    if (propIds.length) {
-      const { data: unitData } = await supabase.from("units").select("*").in("property_id", propIds).eq("status", "AVAILABLE");
-      setUnits(unitData || []);
-    }
+    setProperties(propRes.data || []);
+    setUnits(unitRes.data || []);
     setLoading(false);
   }
 
@@ -58,12 +77,19 @@ export default function TenantsPage() {
 
   function openEdit(t: Tenant) {
     setEditTenant(t);
+    // Find the property for this tenant's unit
+    let propertyId = "";
+    if (t.unit_id) {
+      const unit = units.find(u => u.id === t.unit_id);
+      propertyId = unit?.property_id || "";
+    }
     setForm({
       full_name: t.full_name,
       email: t.email || "",
       phone: t.phone,
       emergency_contact_name: t.emergency_contact_name || "",
       emergency_contact_phone: t.emergency_contact_phone || "",
+      property_id: propertyId,
       unit_id: t.unit_id || "",
       move_in_date: t.move_in_date || "",
       status: t.status,
@@ -93,6 +119,10 @@ export default function TenantsPage() {
         // Update unit status if assigned
         if (form.unit_id && form.status === "ACTIVE") {
           await supabase.from("units").update({ status: "OCCUPIED" }).eq("id", form.unit_id);
+        }
+        // If unit changed, free up old unit
+        if (editTenant.unit_id && editTenant.unit_id !== form.unit_id) {
+          await supabase.from("units").update({ status: "AVAILABLE" }).eq("id", editTenant.unit_id);
         }
         setToast({ msg: "Tenant updated!", type: "success" }); setShowModal(false); fetchAll();
       }
@@ -151,7 +181,7 @@ export default function TenantsPage() {
             <div
               key={t.id}
               className="bg-navy-800 border border-navy-700 rounded-xl p-4 card-hover group cursor-pointer"
-              onClick={() => openEdit(t)}
+              onClick={() => navigate(`/tenants/${t.id}`)}
             >
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
@@ -197,14 +227,29 @@ export default function TenantsPage() {
             <Input label="Emergency contact" placeholder="Contact name" value={form.emergency_contact_name} onChange={(e) => setForm(f => ({ ...f, emergency_contact_name: e.target.value }))} />
             <Input label="Emergency phone" type="tel" value={form.emergency_contact_phone} onChange={(e) => setForm(f => ({ ...f, emergency_contact_phone: e.target.value }))} />
           </div>
-          {units.length > 0 && (
+          
+          {/* Property Selection */}
+          {properties.length > 0 && (
             <Select
-              label="Assign unit"
-              value={form.unit_id}
-              onChange={(e) => setForm(f => ({ ...f, unit_id: e.target.value }))}
-              options={[{ value: "", label: "No unit" }, ...units.map((u) => ({ value: u.id, label: `${u.unit_number}${u.name ? ` — ${u.name}` : ""}` }))]}
+              label="Property *"
+              value={form.property_id}
+              onChange={(e) => setForm(f => ({ ...f, property_id: e.target.value }))}
+              options={[{ value: "", label: "Select a property" }, ...properties.map((p) => ({ value: p.id, label: p.name }))]}
+              required
             />
           )}
+          
+          {/* Unit Selection (filtered by property) */}
+          {filteredUnits.length > 0 && (
+            <Select
+              label="Unit *"
+              value={form.unit_id}
+              onChange={(e) => setForm(f => ({ ...f, unit_id: e.target.value }))}
+              options={[{ value: "", label: "Select a unit" }, ...filteredUnits.map((u) => ({ value: u.id, label: `${u.unit_number}${u.name ? ` — ${u.name}` : ""} (₹${u.monthly_rent?.toLocaleString("en-IN")}/mo)` }))]}
+              required
+            />
+          )}
+          
           <div className="grid grid-cols-2 gap-3">
             <Input label="Move-in date" type="date" value={form.move_in_date} onChange={(e) => setForm(f => ({ ...f, move_in_date: e.target.value }))} />
             <Select
