@@ -25,6 +25,7 @@ import CommunityPage from "../features/community/CommunityPage";
 import IntelligencePage from "../features/intelligence/IntelligencePage";
 import SettingsPage from "../features/settings/SettingsPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
+import AdminPage from "../features/admin/AdminPage";
 
 export const router = createBrowserRouter([
   // ─── Public routes ──────────────────────────────────────
@@ -47,6 +48,11 @@ export const router = createBrowserRouter([
   {
     path: "/auth/callback",
     Component: AuthCallback,
+  },
+  // Admin panel - separate auth
+  {
+    path: "/admin",
+    Component: AdminPage,
   },
 
   // ─── Authenticated routes ──────────────────────────────
