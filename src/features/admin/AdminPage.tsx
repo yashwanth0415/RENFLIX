@@ -478,7 +478,7 @@ export default function AdminPage() {
               <Input
                 label="Email"
                 type="email"
-                placeholder="thurpatiyashwanth@gmail.com"
+                placeholder=""
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
                 required
@@ -487,7 +487,7 @@ export default function AdminPage() {
               <Input
                 label="Password"
                 type="password"
-                placeholder="Yash@1234"
+                placeholder=""
                 value={authPassword}
                 onChange={(e) => setAuthPassword(e.target.value)}
                 required
