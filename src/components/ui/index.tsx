@@ -319,35 +319,122 @@ export function StatCard({
   sub,
   color = "blue",
   icon,
+  onClick,
 }: {
   label: string;
   value: string | number;
   sub?: string;
-  color?: "blue" | "emerald" | "amber" | "red" | "violet" | "orange";
+  color?:
+    | "blue"
+    | "emerald"
+    | "amber"
+    | "red"
+    | "violet"
+    | "orange";
   icon: React.ReactNode;
+  onClick?: () => void;
 }) {
   const colors = {
-    blue:    "from-blue-600/20 to-blue-900/10 border-blue-600/20",
-    emerald: "from-emerald-600/20 to-emerald-900/10 border-emerald-600/20",
-    amber:   "from-amber-600/20 to-amber-900/10 border-amber-600/20",
-    red:     "from-red-600/20 to-red-900/10 border-red-600/20",
-    violet:  "from-violet-600/20 to-violet-900/10 border-violet-600/20",
-    orange:  "from-orange-600/20 to-orange-900/10 border-orange-600/20",
+    blue:
+      "from-blue-600/20 to-blue-900/10 border-blue-600/20",
+
+    emerald:
+      "from-emerald-600/20 to-emerald-900/10 border-emerald-600/20",
+
+    amber:
+      "from-amber-600/20 to-amber-900/10 border-amber-600/20",
+
+    red:
+      "from-red-600/20 to-red-900/10 border-red-600/20",
+
+    violet:
+      "from-violet-600/20 to-violet-900/10 border-violet-600/20",
+
+    orange:
+      "from-orange-600/20 to-orange-900/10 border-orange-600/20",
   };
+
   const iconColors = {
-    blue: "bg-blue-500/15", emerald: "bg-emerald-500/15", amber: "bg-amber-500/15",
-    red: "bg-red-500/15", violet: "bg-violet-500/15", orange: "bg-orange-500/15",
+    blue:
+      "bg-blue-500/15",
+
+    emerald:
+      "bg-emerald-500/15",
+
+    amber:
+      "bg-amber-500/15",
+
+    red:
+      "bg-red-500/15",
+
+    violet:
+      "bg-violet-500/15",
+
+    orange:
+      "bg-orange-500/15",
   };
 
   return (
-    <div className={`relative bg-gradient-to-br ${colors[color]} border rounded-xl p-5 overflow-hidden group transition-all duration-200 hover:scale-[1.02] hover:shadow-lg`}>
-      <div className={`w-9 h-9 rounded-lg ${iconColors[color]} flex items-center justify-center mb-3`}>
+    <div
+      role={
+        onClick
+          ? "button"
+          : undefined
+      }
+      tabIndex={
+        onClick
+          ? 0
+          : undefined
+      }
+      onClick={
+        onClick
+      }
+      onKeyDown={(event) => {
+        if (
+          onClick &&
+          (event.key ===
+            "Enter" ||
+            event.key ===
+              " ")
+        ) {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      className={`relative bg-gradient-to-br ${colors[color]} border rounded-xl p-5 overflow-hidden group transition-all duration-200 hover:scale-[1.02] hover:shadow-lg ${
+        onClick
+          ? "cursor-pointer"
+          : ""
+      }`}
+    >
+      <div
+        className={`w-9 h-9 rounded-lg ${iconColors[color]} flex items-center justify-center mb-3`}
+      >
         {icon}
       </div>
-      <div className="font-display text-2xl font-bold text-white mb-0.5 count-up">{value}</div>
-      <div className="text-[11px] font-semibold text-navy-400 font-display uppercase tracking-wider">{label}</div>
-      {sub && <div className="text-[11px] text-navy-600 mt-0.5">{sub}</div>}
+
+      <div className="font-display text-2xl font-bold text-white mb-0.5 count-up">
+        {value}
+      </div>
+
+      <div className="text-[11px] font-semibold text-navy-400 font-display uppercase tracking-wider">
+        {label}
+      </div>
+
+      {sub && (
+        <div className="text-[11px] text-navy-600 mt-0.5">
+          {sub}
+        </div>
+      )}
+
+      {onClick && (
+        <div className="absolute top-3 right-3 text-[10px] text-navy-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          Open →
+        </div>
+      )}
+
       {/* Subtle glow on hover */}
+
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none bg-gradient-to-br from-white/[0.02] to-transparent" />
     </div>
   );

@@ -261,11 +261,13 @@ export default function TenantDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="font-display text-2xl font-bold text-white">{tenant.full_name}</h1>
               <StatusBadge status={tenant.status} />
-              {tenant.tenant_display_id && (
-                <span className="text-xs text-navy-500 bg-navy-700 px-2 py-0.5 rounded font-mono">ID: {tenant.tenant_display_id}</span>
-              )}
+             
             </div>
+            {/* {tenant.tenant_display_id && (
+                <span className="text-xs text-navy-500 bg-navy-700 px-2 py-0.5 rounded font-mono">ID: {tenant.tenant_display_id}</span>
+              )}*/}
             <div className="flex flex-wrap gap-4 text-sm text-navy-300 mt-2">
+
               {tenant.phone && (
                 <div className="flex items-center gap-2">
                   <Phone size={16} />

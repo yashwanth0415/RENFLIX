@@ -1025,105 +1025,118 @@ export default function PropertyDetailPage() {
         </Button>
       </div>
 
-      {/* ====================================================== */}
-      {/* PROPERTY HERO                                          */}
-      {/* ====================================================== */}
+     {/* ====================================================== */}
+{/* PROPERTY HERO                                          */}
+{/* ====================================================== */}
 
-      <div className="relative h-72 bg-navy-700 overflow-hidden rounded-2xl mb-6">
-        <img
-          src={
-            property.image_url ||
-            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop&auto=format"
-          }
-          alt={
-            property.name
-          }
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
+<div className="relative h-[300px] sm:h-[320px] md:h-72 bg-navy-700 overflow-hidden rounded-2xl mb-6">
 
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-900/90 via-navy-900/40 to-transparent" />
+  {/* Property image */}
+  <img
+    src={
+      property.image_url ||
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop&auto=format"
+    }
+    alt={property.name}
+    className="absolute inset-0 w-full h-full object-cover object-center"
+    loading="lazy"
+  />
 
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <StatusBadge
-                  status={
-                    property.status
-                  }
-                />
+  {/* Dark gradient */}
+  <div className="absolute inset-0 bg-gradient-to-t from-navy-950/95 via-navy-950/45 to-transparent" />
 
-                <span className="text-sm text-navy-300 font-mono uppercase">
-                  {property.property_type.replace(
-                    /_/g,
-                    " "
-                  )}
-                </span>
+  {/* Hero content */}
+  <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-6">
 
-                {property.property_display_id && (
-                  <span className="text-xs text-navy-500 bg-navy-700 px-2 py-0.5 rounded font-mono">
-                    ID:{" "}
-                    {
-                      property.property_display_id
-                    }
-                  </span>
-                )}
-              </div>
+    <div className="flex items-end justify-between gap-3">
 
-              <h1 className="font-display text-3xl font-bold text-white">
-                {
-                  property.name
-                }
-              </h1>
+      {/* ================================================= */}
+      {/* LEFT — PROPERTY INFORMATION                      */}
+      {/* ================================================= */}
 
-              <div className="flex items-center gap-2 text-navy-300 mt-2">
-                <Building2
-                  size={16}
-                />
+      <div className="min-w-0 flex-1">
 
-                <span>
-                  {
-                    property.address
-                  }
-                  ,{" "}
-                  {
-                    property.city
-                  }
-                  ,{" "}
-                  {
-                    property.state
-                  }
-                </span>
-              </div>
-            </div>
+        {/* Status / type / ID */}
 
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={
-                  openEdit
-                }
-              >
-                <Edit
-                  size={16}
-                />
-              </Button>
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
 
-              <Button
-                variant="danger"
-                onClick={
-                  archiveProperty
-                }
-              >
-                <Archive
-                  size={16}
-                />
-              </Button>
-            </div>
-          </div>
+          <StatusBadge
+            status={property.status}
+          />
+
+          <span className="text-[9px] sm:text-[10px] md:text-xs text-navy-300 font-mono uppercase bg-navy-950/45 rounded-md px-1.5 sm:px-2 py-1">
+            {property.property_type.replace(
+              /_/g,
+              " "
+            )}
+          </span>
+
+          {property.property_display_id && (
+            <span className="text-[9px] sm:text-[10px] md:text-xs text-navy-300 bg-navy-950/50 border border-white/10 px-1.5 sm:px-2 py-1 rounded-md font-mono">
+              ID:{" "}
+              {
+                property.property_display_id
+              }
+            </span>
+          )}
+
         </div>
+
+        {/* Property name */}
+<h1 className="font-display text-2xl sm:text-3xl md:text-3xl font-bold text-white leading-tight break-words">
+  {property.name}
+</h1>
+
+        {/* Address */}
+
+        <div className="flex items-start gap-1.5 sm:gap-2 text-navy-300 mt-1.5 sm:mt-2 max-w-[90%]">
+
+          <Building2
+            size={13}
+            className="mt-0.5 flex-shrink-0 sm:w-4 sm:h-4"
+          />
+
+          <span className="text-[10px] sm:text-xs md:text-sm leading-relaxed break-words">
+            {property.address},{" "}
+            {property.city},{" "}
+            {property.state}
+          </span>
+
+        </div>
+
       </div>
+
+      {/* ================================================= */}
+      {/* RIGHT — ACTIONS                                   */}
+      {/* ================================================= */}
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+
+        <Button
+          variant="secondary"
+          onClick={openEdit}
+        >
+          <Edit
+            size={16}
+          />
+        </Button>
+
+        <Button
+          variant="danger"
+          onClick={archiveProperty}
+        >
+          <Archive
+            size={16}
+          />
+        </Button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
 
       {/* ====================================================== */}
       {/* STATS                                                    */}
@@ -1166,12 +1179,12 @@ export default function PropertyDetailPage() {
                 "ACTIVE"
             ).length
           }
-          sub={`${tenants.length} tenant record${
-            tenants.length ===
-            1
-              ? ""
-              : "s"
-          } in this property`}
+          // sub={`${tenants.length} tenant record${
+          //   tenants.length ===
+          //   1
+          //     ? ""
+          //     : "s"
+          // } in this property`}
           icon={
             <Users
               size={18}
@@ -1273,10 +1286,10 @@ export default function PropertyDetailPage() {
               Tenants in this property
             </h3>
 
-            <p className="text-xs text-navy-500 mt-1">
+           {/* <p className="text-xs text-navy-500 mt-1">
               Tenants are linked to properties through their
               assigned units.
-            </p>
+            </p>*/}
           </div>
 
           <button
