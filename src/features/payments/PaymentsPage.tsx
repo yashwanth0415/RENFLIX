@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { CreditCard, Plus, Search, Receipt } from "lucide-react";
+import { CreditCard, Plus, Search, Receipt, Send } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import {
   Button, Card, StatusBadge, Modal, Input, Select, Textarea, PageHeader, EmptyState, Skeleton, Toast,
 } from "../../components/ui";
-import type { Payment, PaymentStatus, PaymentMethod, Tenant, Property } from "../../lib/types";
+import type { Payment, PaymentStatus, PaymentMethod, Tenant, Property, Unit } from "../../lib/types";
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "UPI", label: "UPI" },
@@ -27,6 +27,13 @@ const defaultForm = {
   status: "PAID" as PaymentStatus,
 };
 
+const pushDefault = {
+  property_id: "",
+  tenant_id: "",
+  amount: "",
+  month: new Date().toISOString().slice(0, 7),
+};
+
 function formatINR(n: number) {
   return `₹${n.toLocaleString("en-IN")}`;
 }
@@ -36,11 +43,15 @@ export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showPushModal, setShowPushModal] = useState(false);
+  const [pushForm, setPushForm] = useState(pushDefault);
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
+  const [pushSubmitting, setPushSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [receiptPayment, setReceiptPayment] = useState<Payment | null>(null);
 
@@ -50,14 +61,16 @@ export default function PaymentsPage() {
   }, [profile]);
 
   async function fetchAll() {
-    const [payRes, tenRes, propRes] = await Promise.all([
+    const [payRes, tenRes, propRes, unitRes] = await Promise.all([
       supabase.from("payments").select("*").eq("organization_id", profile!.organization_id!).order("created_at", { ascending: false }),
       supabase.from("tenants").select("*").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE"),
       supabase.from("properties").select("*").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE"),
+      supabase.from("units").select("*").eq("organization_id", profile!.organization_id!),
     ]);
     setPayments(payRes.data || []);
     setTenants(tenRes.data || []);
     setProperties(propRes.data || []);
+    setUnits((unitRes.data || []) as Unit[]);
     setLoading(false);
   }
 
@@ -85,6 +98,33 @@ export default function PaymentsPage() {
     setSubmitting(false);
   }
 
+  async function handlePushPayment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profile?.organization_id || !pushForm.property_id || !pushForm.tenant_id || !pushForm.amount || !pushForm.month) {
+      setToast({ msg: "Select property, tenant, month and enter an amount.", type: "error" });
+      return;
+    }
+    setPushSubmitting(true);
+    try {
+      const { data: payment, error } = await supabase.rpc("push_payment_request", {
+        p_property_id: pushForm.property_id,
+        p_tenant_id: pushForm.tenant_id,
+        p_amount: Number(pushForm.amount),
+        p_month: `${pushForm.month}-01`,
+      });
+      if (error) throw error;
+      if (!payment) throw new Error("Payment request was not created.");
+      setToast({ msg: "Payment request pushed to the tenant.", type: "success" });
+      setShowPushModal(false);
+      setPushForm(pushDefault);
+      fetchAll();
+    } catch (error) {
+      setToast({ msg: error instanceof Error ? error.message : "Unable to push payment request.", type: "error" });
+    } finally {
+      setPushSubmitting(false);
+    }
+  }
+
   const filtered = payments.filter((p) => {
     const t = tenants.find((t) => t.id === p.tenant_id);
     return (
@@ -102,9 +142,14 @@ export default function PaymentsPage() {
         title="Payments"
         subtitle="Record and track all rent payments"
         action={
-          <Button onClick={() => setShowModal(true)} size="sm">
-            <Plus size={16} /> Record Payment
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => setShowPushModal(true)} size="sm">
+              <Send size={15} /> Push Payment
+            </Button>
+            <Button onClick={() => setShowModal(true)} size="sm">
+              <Plus size={16} /> Record Payment
+            </Button>
+          </div>
         }
       />
 
@@ -146,6 +191,7 @@ export default function PaymentsPage() {
           <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-navy-700">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Payment ID</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Tenant</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Amount</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden sm:table-cell">Method</th>
@@ -159,6 +205,7 @@ export default function PaymentsPage() {
                 const tenant = tenants.find((t) => t.id === pay.tenant_id);
                 return (
                   <tr key={pay.id} className="border-b border-navy-700/50 hover:bg-navy-700/30 transition-colors">
+                    <td className="px-4 py-3 font-mono text-blue-300 font-semibold">#{pay.payment_display_id || "—"}</td>
                     <td className="px-4 py-3">
                       <div className="font-semibold text-white">{tenant?.full_name || "Unknown"}</div>
                       {pay.reference_number && <div className="text-xs text-navy-500 font-mono">{pay.reference_number}</div>}
@@ -225,6 +272,46 @@ export default function PaymentsPage() {
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="ghost" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" loading={submitting}>Record Payment</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Push Payment Modal */}
+      <Modal open={showPushModal} onClose={() => !pushSubmitting && setShowPushModal(false)} title="Push Payment Request">
+        <form onSubmit={handlePushPayment} className="flex flex-col gap-4">
+          <div className="bg-blue-900/20 border border-blue-800 rounded-lg px-3 py-2 text-xs text-blue-300">
+            Send a payment request to a tenant. It will appear in their notifications and Payments page.
+          </div>
+          <Select
+            label="Property"
+            value={pushForm.property_id}
+            onChange={(e) => setPushForm(f => ({ ...f, property_id: e.target.value, tenant_id: "" }))}
+            options={[{ value: "", label: "Select property" }, ...properties.map(p => ({ value: p.id, label: p.name }))]}
+            required
+          />
+          <Select
+            label="Tenant"
+            value={pushForm.tenant_id}
+            onChange={(e) => setPushForm(f => ({ ...f, tenant_id: e.target.value }))}
+            options={[
+              { value: "", label: pushForm.property_id ? "Select tenant" : "Select property first" },
+              ...tenants
+                .filter(t => {
+                  const unit = units.find(u => u.id === t.unit_id);
+                  return unit?.property_id === pushForm.property_id;
+                })
+                .map(t => ({ value: t.id, label: `${t.full_name}${t.phone ? ` · ${t.phone}` : ""}` }))
+            ]}
+            disabled={!pushForm.property_id}
+            required
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Amount (₹)" type="number" min="1" value={pushForm.amount} onChange={e => setPushForm(f => ({ ...f, amount: e.target.value }))} placeholder="15000" required />
+            <Input label="Month" type="month" value={pushForm.month} onChange={e => setPushForm(f => ({ ...f, month: e.target.value }))} required />
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="ghost" type="button" onClick={() => setShowPushModal(false)}>Cancel</Button>
+            <Button type="submit" loading={pushSubmitting}><Send size={15} /> Push Payment</Button>
           </div>
         </form>
       </Modal>

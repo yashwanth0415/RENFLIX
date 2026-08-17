@@ -1,21 +1,10 @@
 import { NavLink, useNavigate } from "react-router";
+import { useState } from "react";
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  FileText,
-  CreditCard,
-  Wrench,
-  MessageSquare,
-  BarChart3,
-  Settings,
-  LogOut,
-  Cpu,
-  Home,
-  DoorOpen,
-  Globe,
+  LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Megaphone,
+  Settings, LogOut, Cpu, Home, DoorOpen, Globe, FileText, BarChart3,
+  ChevronDown, ChevronRight
 } from "lucide-react";
-
 import { supabase } from "../../lib/supabase";
 import type { Profile } from "../../lib/types";
 
@@ -24,108 +13,51 @@ interface NavItem {
   icon: React.ReactNode;
   label: string;
   roles?: string[];
+  beta?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    to: "/dashboard",
-    icon: <LayoutDashboard size={18} />,
-    label: "Dashboard",
-  },
-  {
-    to: "/properties",
-    icon: <Building2 size={18} />,
-    label: "Properties",
-    roles: [
-      "OWNER",
-      "PROPERTY_MANAGER",
-      "ADMIN",
-      "HOSTEL_MANAGER",
-    ],
-  },
-  {
-    to: "/units",
-    icon: <DoorOpen size={18} />,
-    label: "Units",
-    roles: [
-      "OWNER",
-      "PROPERTY_MANAGER",
-      "ADMIN",
-      "HOSTEL_MANAGER",
-    ],
-  },
-  {
-    to: "/tenants",
-    icon: <Users size={18} />,
-    label: "Tenants",
-    roles: [
-      "OWNER",
-      "PROPERTY_MANAGER",
-      "HOSTEL_MANAGER",
-      "ADMIN",
-    ],
-  },
-  {
-    to: "/leases",
-    icon: <FileText size={18} />,
-    label: "Leases",
-    roles: [
-      "OWNER",
-      "PROPERTY_MANAGER",
-      "ADMIN",
-    ],
-  },
-  {
-    to: "/payments",
-    icon: <CreditCard size={18} />,
-    label: "Payments",
-  },
-  {
-    to: "/maintenance",
-    icon: <Wrench size={18} />,
-    label: "Maintenance",
-  },
-  {
-    to: "/messages",
-    icon: <MessageSquare size={18} />,
-    label: "Messages",
-  },
-  {
-    to: "/community",
-    icon: <Globe size={18} />,
-    label: "Community",
-    roles: [
-      "OWNER",
-      "COMMUNITY_MANAGER",
-      "ADMIN",
-    ],
-  },
-  {
-    to: "/analytics",
-    icon: <BarChart3 size={18} />,
-    label: "Analytics",
-    roles: [
-      "OWNER",
-      "PROPERTY_MANAGER",
-      "ADMIN",
-    ],
-  },
-  {
-    to: "/intelligence",
-    icon: <Cpu size={18} />,
-    label: "Intelligence",
-    roles: [
-      "OWNER",
-      "PROPERTY_MANAGER",
-      "ADMIN",
-    ],
-  },
-  {
-    to: "/settings",
-    icon: <Settings size={18} />,
-    label: "Settings",
-  },
+const MAIN_OWNER: NavItem[] = [
+  { to: "/dashboard", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
+  { to: "/properties", icon: <Building2 size={18} />, label: "Properties" },
+  { to: "/units", icon: <DoorOpen size={18} />, label: "Units" },
+  { to: "/tenants", icon: <Users size={18} />, label: "Tenants" },
+  { to: "/payments", icon: <CreditCard size={18} />, label: "Payments" },
+  { to: "/maintenance", icon: <Wrench size={18} />, label: "Maintenance" },
 ];
+
+const MORE_ITEMS: NavItem[] = [
+  { to: "/messages", icon: <MessageSquare size={18} />, label: "Messages", beta: true },
+  { to: "/community", icon: <Globe size={18} />, label: "Community", beta: true },
+  { to: "/leases", icon: <FileText size={18} />, label: "Leases", beta: true },
+  { to: "/analytics", icon: <BarChart3 size={18} />, label: "Analytics", beta: true },
+  { to: "/intelligence", icon: <Cpu size={18} />, label: "Intelligence", beta: true },
+];
+
+const TENANT_ITEMS: NavItem[] = [
+  { to: "/dashboard", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
+  { to: "/payments", icon: <CreditCard size={18} />, label: "Payments" },
+  { to: "/maintenance", icon: <Wrench size={18} />, label: "Maintenance" },
+  { to: "/messages", icon: <MessageSquare size={18} />, label: "Messages" },
+  { to: "/announcements", icon: <Megaphone size={18} />, label: "Announcements" },
+];
+
+function LinkItem({ item, onClose }: { item: NavItem; onClose?: () => void }) {
+  return (
+    <NavLink
+      to={item.to}
+      onClick={onClose}
+      className={({ isActive }) => `sidebar-link relative ${isActive ? "active" : ""}`}
+    >
+      {item.icon}
+      <span className="flex-1">{item.label}</span>
+      {item.beta && (
+        <span className="absolute top-1 right-2 text-[7px] leading-none px-1 py-0.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 font-bold uppercase">
+          Beta
+        </span>
+      )}
+    </NavLink>
+  );
+}
 
 interface SidebarProps {
   profile: Profile | null;
@@ -133,173 +65,86 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export default function Sidebar({
-  profile,
-  mobile,
-  onClose,
-}: SidebarProps) {
+export default function Sidebar({ profile, mobile, onClose }: SidebarProps) {
   const navigate = useNavigate();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   async function handleLogout() {
     await supabase.auth.signOut();
-
-    navigate("/login", {
-      replace: true,
-    });
+    navigate("/login", { replace: true });
   }
 
-  const visibleItems =
-    NAV_ITEMS.filter(
-      (item) =>
-        (!profile?.role || item.roles?.includes(profile.role) || !item.roles) &&
-      (profile?.role !== "TENANT" ||
-        ["/dashboard", "/payments", "/maintenance", "/messages", "/settings"].includes(item.to))
-    );
+  const role = profile?.role;
+  const isOwnerPortal = ["OWNER", "PROPERTY_MANAGER"].includes(role || "");
+  const mainItems = role === "TENANT"
+    ? TENANT_ITEMS
+    : isOwnerPortal
+      ? MAIN_OWNER
+      : [
+          { to: "/dashboard", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
+          { to: "/properties", icon: <Building2 size={18} />, label: "Properties" },
+          { to: "/units", icon: <DoorOpen size={18} />, label: "Units" },
+          { to: "/tenants", icon: <Users size={18} />, label: "Tenants" },
+          { to: "/payments", icon: <CreditCard size={18} />, label: "Payments" },
+          { to: "/maintenance", icon: <Wrench size={18} />, label: "Maintenance" },
+        ];
 
   return (
-    <aside
-      className={`flex flex-col bg-navy-900 border-r border-navy-800 ${
-        mobile
-          ? "w-full"
-          : "w-60"
-      } h-full`}
-    >
-      {/* ==================================================== */}
-      {/* LOGO                                                 */}
-      {/* ==================================================== */}
-
+    <aside className={`flex flex-col bg-navy-900 border-r border-navy-800 ${mobile ? "w-full" : "w-60"} h-full`}>
       <div className="px-5 py-5 border-b border-navy-800">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
-            <Home
-              size={16}
-              className="text-white"
-            />
+            <Home size={16} className="text-white" />
           </div>
-
           <div>
-            <div className="font-display text-lg font-extrabold gradient-text leading-none">
-              RENFLIX
-            </div>
-
-            <div className="text-[9px] text-navy-500 font-mono uppercase tracking-widest">
-              Property OS
-            </div>
+            <div className="font-display text-lg font-extrabold gradient-text leading-none">RENFLIX</div>
+            <div className="text-[9px] text-navy-500 font-mono uppercase tracking-widest">Property OS</div>
           </div>
         </div>
       </div>
 
-      {/* ==================================================== */}
-      {/* USER INFO                                            */}
-      {/* ==================================================== */}
-
       {profile && (
         <div className="px-4 py-3 border-b border-navy-800">
           <div className="flex items-start gap-2.5">
-            {/* Avatar */}
-
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-white">
-                {(profile.full_name ||
-                  "U")[0].toUpperCase()}
-              </span>
+              <span className="text-xs font-bold text-white">{(profile.full_name || "U")[0].toUpperCase()}</span>
             </div>
-
-            {/* Account details */}
-
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-white font-display truncate">
-                {profile.full_name ||
-                  "User"}
-              </div>
-
-              <div className="text-[10px] text-blue-400 font-mono uppercase">
-                {profile.role}
-              </div>
-
-              {/* Email */}
-
-             {/* {profile.email && (
-                <div
-                  className="text-[10px] text-navy-500 truncate mt-0.5"
-                  title={
-                    profile.email
-                  }
-                >
-                  {profile.email}
-                </div>
-              )}*/}
-
-              {/* Phone */}
-
-             {/* {profile.phone && (
-                <div
-                  className="text-[10px] text-navy-600 truncate"
-                  title={
-                    profile.phone
-                  }
-                >
-                  {profile.phone}
-                </div>
-              )}*/}
+              <div className="text-sm font-semibold text-white font-display truncate">{profile.full_name || "User"}</div>
+              <div className="text-[10px] text-blue-400 font-mono uppercase">{profile.role}</div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================================================== */}
-      {/* NAVIGATION                                           */}
-      {/* ==================================================== */}
-
       <nav className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-0.5">
-        {visibleItems.map(
-          (item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={
-                onClose
-              }
-              className={({
-                isActive,
-              }) =>
-                `sidebar-link ${
-                  isActive
-                    ? "active"
-                    : ""
-                }`
-              }
+        {mainItems.map(item => <LinkItem key={item.to} item={item} onClose={onClose} />)}
+
+        {isOwnerPortal && (
+          <div className="mt-0.5">
+            <button
+              type="button"
+              onClick={() => setMoreOpen(v => !v)}
+              className="sidebar-link w-full h-[42px]"
+              aria-expanded={moreOpen}
             >
-              {item.icon}
+              <ChevronDown size={18} className={`transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+              <span className="flex-1 text-left">More</span>
+              {/*{moreOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}*/}
+            </button>
 
-              <span>
-                {item.label}
-              </span>
-            </NavLink>
-          )
+            {moreOpen && (
+              <div className="mt-1 ml-2 pl-2 border-l border-navy-700 flex flex-col gap-0.5 animate-fade-in">
+                {MORE_ITEMS.map(item => <LinkItem key={item.to} item={item} onClose={onClose} />)}
+              </div>
+            )}
+          </div>
         )}
+
+        <div className="mt-auto pt-2">
+          <LinkItem item={{ to: "/settings", icon: <Settings size={18} />, label: "Settings" }} onClose={onClose} />
+        </div>
       </nav>
-
-      {/* ==================================================== */}
-      {/* LOGOUT                                               */}
-      {/* ==================================================== */}
-
-      <div className="px-3 py-3 border-t border-navy-800">
-        <button
-          onClick={
-            handleLogout
-          }
-          className="sidebar-link w-full text-red-400 hover:bg-red-500/10 hover:text-red-300"
-        >
-          <LogOut
-            size={18}
-          />
-
-          <span>
-            Sign out
-          </span>
-        </button>
-      </div>
     </aside>
   );
 }

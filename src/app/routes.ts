@@ -22,6 +22,7 @@ import MaintenancePage from "../features/maintenance/MaintenancePage";
 import MessagesPage from "../features/messaging/MessagesPage";
 import AnalyticsPage from "../features/analytics/AnalyticsPage";
 import CommunityPage from "../features/community/CommunityPage";
+import AnnouncementsPage from "../features/community/AnnouncementsPage";
 import IntelligencePage from "../features/intelligence/IntelligencePage";
 import SettingsPage from "../features/settings/SettingsPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
       { path: "notifications", Component: NotificationsPage },
       { path: "analytics", Component: AnalyticsPage },
       { path: "community", Component: CommunityPage },
+      { path: "announcements", Component: AnnouncementsPage },
       { path: "intelligence", Component: IntelligencePage },
       { path: "settings", Component: SettingsPage },
     ],

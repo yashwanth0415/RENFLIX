@@ -159,11 +159,12 @@ export interface Lease {
   updated_at: string;
 }
 
-export type PaymentStatus = "PENDING" | "PAID" | "PARTIALLY_PAID" | "OVERDUE" | "WAIVED" | "CANCELLED";
+export type PaymentStatus = "PENDING" | "UNDER_REVIEW" | "RECEIVED" | "PAID" | "PARTIALLY_PAID" | "OVERDUE" | "WAIVED" | "CANCELLED";
 export type PaymentMethod = "UPI" | "CARD" | "BANK_TRANSFER" | "CASH" | "CHEQUE" | "OTHER";
 
 export interface Payment {
   id: string;
+  payment_display_id?: string | null;
   organization_id: string;
   lease_id: string | null;
   tenant_id: string;
@@ -177,6 +178,7 @@ export interface Payment {
   notes: string | null;
   status: PaymentStatus;
   receipt_url: string | null;
+  submission_screenshot_url?: string | null;
   created_at: string;
 }
 

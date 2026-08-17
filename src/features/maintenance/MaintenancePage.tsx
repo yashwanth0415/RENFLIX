@@ -55,6 +55,8 @@ export default function MaintenancePage() {
   const [filterPriority, setFilterPriority] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<MaintenanceRequest | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -97,8 +99,13 @@ export default function MaintenancePage() {
             setProperties(prop ? [prop as Property] : []);
           }
         }
-        // Tenants are intentionally NOT shown their request list/status.
-        setRequests([]);
+        const { data: tenantRequests, error: requestError } = await supabase
+          .from("maintenance_requests")
+          .select("*")
+          .eq("tenant_id", t.id)
+          .order("created_at", { ascending: false });
+        if (requestError) throw requestError;
+        setRequests((tenantRequests || []) as MaintenanceRequest[]);
       } else {
         const [reqRes, propRes] = await Promise.all([
           supabase.from("maintenance_requests")
@@ -153,6 +160,27 @@ export default function MaintenancePage() {
     }
   }
 
+  function toggleMaintenanceSelection(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  async function deleteSelectedMaintenance() {
+    if (!selectedIds.length) {
+      setToast({ msg: "Select at least one maintenance request.", type: "error" });
+      return;
+    }
+    if (!confirm(`Delete ${selectedIds.length} selected maintenance request(s)?`)) return;
+    const { error } = await supabase.from("maintenance_requests").delete().in("id", selectedIds);
+    if (error) {
+      setToast({ msg: error.message, type: "error" });
+      return;
+    }
+    setToast({ msg: "Selected maintenance requests deleted.", type: "success" });
+    setSelectedIds([]);
+    setSelectionMode(false);
+    fetchAll();
+  }
+
   async function advanceStatus(req: MaintenanceRequest) {
     const next = NEXT_STATUS[req.status];
     if (!next || isTenant) return;
@@ -193,23 +221,52 @@ export default function MaintenancePage() {
           title="Maintenance"
           subtitle="Report a maintenance issue to your property owner."
           action={
-            <Button onClick={() => setShowModal(true)} size="sm">
-              <Plus size={16} /> Make Request
-            </Button>
+            <div className="flex items-center gap-2">
+              {/*{selectionMode ? (
+                <Button variant="secondary" size="sm" onClick={deleteSelectedMaintenance} disabled={!selectedIds.length} className="text-red-400">
+                  Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}
+                </Button>
+              ) : (
+                <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
+              )}*/}
+              <Button onClick={() => setShowModal(true)} size="sm">
+                <Plus size={16} />New
+              </Button>
+            </div>
           }
         />
-        <Card>
-          <EmptyState
-            icon={<Wrench size={28} />}
-            title="Need something repaired?"
-            description="Create a maintenance request and the property owner will handle it. Your tenant portal does not show maintenance status or allow you to modify submitted requests."
-            action={
-              <Button onClick={() => setShowModal(true)} size="sm">
-                <Plus size={14} /> Make Request
-              </Button>
-            }
-          />
-        </Card>
+        {requests.length === 0 ? (
+          <Card>
+            <EmptyState
+              icon={<Wrench size={28} />}
+              title="Need something repaired?"
+              description="Create a maintenance request for your property owner."
+              action={<Button onClick={() => setShowModal(true)} size="sm"><Plus size={14} /> Make Request</Button>}
+            />
+          </Card>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {requests.map(req => (
+              <div key={req.id} className="bg-navy-800 border border-navy-700 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  {selectionMode && (
+                    <button type="button" onClick={() => toggleMaintenanceSelection(req.id)} className="mt-1 text-navy-300">
+                      <span className={`inline-flex w-4 h-4 rounded border ${selectedIds.includes(req.id) ? "bg-blue-600 border-blue-500" : "border-navy-500"}`}>
+                        {selectedIds.includes(req.id) && <span className="text-white text-[10px] leading-none m-auto">✓</span>}
+                      </span>
+                    </button>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-white text-sm">{req.title}</div>
+                    <div className="text-xs text-navy-500 mt-1">{req.category} · {new Date(req.created_at).toLocaleDateString("en-IN")}</div>
+                    <p className="text-xs text-navy-400 mt-2">{req.description}</p>
+                    {/*<div className="text-[11px] text-navy-600 mt-2">You can delete this request, but status updates are managed by the property owner.</div>*/}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <Modal open={showModal} onClose={() => !submitting && setShowModal(false)} title="New Maintenance Request">
           <form onSubmit={handleTenantSubmit} className="flex flex-col gap-4">
@@ -264,6 +321,15 @@ export default function MaintenancePage() {
       <PageHeader
         title="Maintenance"
         subtitle={`${openCount} open request${openCount !== 1 ? "s" : ""}`}
+        action={
+          selectionMode ? (
+            <Button variant="secondary" size="sm" onClick={deleteSelectedMaintenance} disabled={!selectedIds.length} className="text-red-400">
+              Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}
+            </Button>
+          ) : (
+            <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
+          )
+        }
       />
       <div className="flex flex-wrap gap-3 mb-5">
         <div className="relative flex-1 min-w-[180px]">
@@ -303,6 +369,13 @@ export default function MaintenancePage() {
             return (
               <div key={req.id} className="bg-navy-800 border border-navy-700 rounded-xl p-4 card-hover group cursor-pointer" onClick={() => setSelected(req)}>
                 <div className="flex items-start justify-between gap-3 mb-2">
+                  {selectionMode && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleMaintenanceSelection(req.id); }} className="text-navy-300 mt-1">
+                      <span className={`inline-flex w-4 h-4 rounded border ${selectedIds.includes(req.id) ? "bg-blue-600 border-blue-500" : "border-navy-500"}`}>
+                        {selectedIds.includes(req.id) && <span className="text-white text-[10px] leading-none m-auto">✓</span>}
+                      </span>
+                    </button>
+                  )}
                   <div className="flex-1">
                     <div className="font-display font-semibold text-white text-sm">{req.title}</div>
                     <div className="text-xs text-navy-400">{req.category} · {prop?.name || "Unknown property"}</div>

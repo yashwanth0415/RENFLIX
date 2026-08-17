@@ -31,6 +31,8 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [newMsg, setNewMsg] = useState("");
   const [starting, setStarting] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedConversationIds, setSelectedConversationIds] = useState<string[]>([]);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -162,6 +164,31 @@ export default function MessagesPage() {
     }));
   }, [isTenant, loading]);
 
+  function toggleConversationSelection(id: string) {
+    setSelectedConversationIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  async function deleteSelectedConversations() {
+    if (!selectedConversationIds.length) {
+      setToast({ msg: "Select at least one conversation.", type: "error" });
+      return;
+    }
+    if (!confirm(`Delete ${selectedConversationIds.length} selected conversation(s) and their messages?`)) return;
+    const { error } = await supabase.from("conversations").delete().in("id", selectedConversationIds);
+    if (error) {
+      setToast({ msg: error.message, type: "error" });
+      return;
+    }
+    if (activeConv && selectedConversationIds.includes(activeConv.id)) {
+      setActiveConv(null);
+      setMessages([]);
+    }
+    setSelectedConversationIds([]);
+    setSelectionMode(false);
+    setToast({ msg: "Selected conversations deleted.", type: "success" });
+    loadConversations();
+  }
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!newMsg.trim() || !activeConv || !user) return;
@@ -195,27 +222,44 @@ export default function MessagesPage() {
           </p>
         </div>
         {!isTenant && (
-          <div className="flex items-center gap-2">
-            <Select
-              value={selectedTenantId}
-              onChange={(e) => setSelectedTenantId(e.target.value)}
-              options={[
-                { value: "", label: "Select tenant..." },
-                ...tenants.map((t) => ({
-                  value: t.id,
-                  label: `${t.full_name}${t.tenant_display_id ? ` · ${t.tenant_display_id}` : ""}`,
-                })),
-              ]}
-            />
-            <Button size="sm" onClick={startTenantConversation} loading={starting} disabled={!selectedTenantId}>
-              Start
-            </Button>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="w-56">
+              <Select
+                className="h-[42px]"
+                value={selectedTenantId}
+                onChange={(e) => setSelectedTenantId(e.target.value)}
+                options={[
+                  { value: "", label: "Select tenant..." },
+                  ...tenants.map((t) => ({
+                    value: t.id,
+                    label: `${t.full_name}${t.tenant_display_id ? ` · ${t.tenant_display_id}` : ""}`,
+                  })),
+                ]}
+              />
+            </div>
+            <Button className="h-[42px]" size="sm" onClick={startTenantConversation} loading={starting} disabled={!selectedTenantId}>Start</Button>
+            {selectionMode ? (
+              <Button className="h-[42px]" variant="secondary" size="sm" onClick={deleteSelectedConversations} disabled={!selectedConversationIds.length}>
+                Delete{selectedConversationIds.length ? ` (${selectedConversationIds.length})` : ""}
+              </Button>
+            ) : (
+              <Button className="h-[42px]" variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
+            )}
           </div>
+        )}
+        {isTenant && (
+          selectionMode ? (
+            <Button className="h-[42px]" variant="secondary" size="sm" onClick={deleteSelectedConversations} disabled={!selectedConversationIds.length}>
+              Delete{selectedConversationIds.length ? ` (${selectedConversationIds.length})` : ""}
+            </Button>
+          ) : (
+            <Button className="h-[42px]" variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
+          )
         )}
       </div>
 
-      <div className="flex gap-4 h-[calc(100%-64px)]">
-        <div className={`w-full md:w-72 flex-shrink-0 bg-navy-800 border border-navy-700 rounded-xl overflow-y-auto ${activeConv ? "hidden md:block" : "block"}`}>
+      <div className={`flex gap-4 h-[calc(100%-64px)] ${isTenant ? "w-full" : ""}`}>
+        {!isTenant && <div className={`w-full md:w-72 flex-shrink-0 bg-navy-800 border border-navy-700 rounded-xl overflow-y-auto ${activeConv ? "hidden md:block" : "block"}`}>
           {loading ? (
             <div className="p-3 flex flex-col gap-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
           ) : conversations.length === 0 ? (
@@ -226,17 +270,26 @@ export default function MessagesPage() {
           ) : (
             <div className="flex flex-col">
               {conversations.map((conv) => (
-                <button key={conv.id} onClick={() => setActiveConv(conv)}
-                  className={`text-left px-4 py-3 border-b border-navy-700 hover:bg-navy-700/40 transition-colors ${activeConv?.id === conv.id ? "bg-blue-600/15 border-l-2 border-l-blue-500" : ""}`}>
-                  <div className="font-semibold text-sm text-white truncate">{conv.title || "Conversation"}</div>
-                  <div className="text-xs text-navy-500">{new Date(conv.updated_at).toLocaleDateString("en-IN")}</div>
-                </button>
+                <div key={conv.id} className={`flex items-center border-b border-navy-700 ${activeConv?.id === conv.id ? "bg-blue-600/15 border-l-2 border-l-blue-500" : ""}`}>
+                  {selectionMode && (
+                    <button type="button" onClick={() => toggleConversationSelection(conv.id)} className="px-3 text-navy-300">
+                      <span className={`inline-flex w-4 h-4 rounded border ${selectedConversationIds.includes(conv.id) ? "bg-blue-600 border-blue-500" : "border-navy-500"}`}>
+                        {selectedConversationIds.includes(conv.id) && <span className="text-white text-[10px] leading-none m-auto">✓</span>}
+                      </span>
+                    </button>
+                  )}
+                  <button key={conv.id} onClick={() => setActiveConv(conv)}
+                    className="flex-1 text-left px-4 py-3 hover:bg-navy-700/40 transition-colors">
+                    <div className="font-semibold text-sm text-white truncate">{conv.title || "Conversation"}</div>
+                    <div className="text-xs text-navy-500">{new Date(conv.updated_at).toLocaleDateString("en-IN")}</div>
+                  </button>
+                </div>
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
-        <div className={`flex-1 bg-navy-800 border border-navy-700 rounded-xl flex flex-col overflow-hidden ${!activeConv ? "hidden md:flex" : "flex"}`}>
+        <div className={`${isTenant ? "w-full" : "flex-1"} bg-navy-800 border border-navy-700 rounded-xl flex flex-col overflow-hidden ${!activeConv ? "hidden md:flex" : "flex"}`}>
           {!activeConv ? (
             <div className="flex-1 items-center justify-center hidden md:flex">
               <EmptyState icon={<UserRound size={28} />} title="Select a conversation" description={isTenant ? "Your conversation with the owner will appear here." : "Choose a tenant above and start a conversation."} />
@@ -247,7 +300,7 @@ export default function MessagesPage() {
                 <button className="md:hidden text-navy-400 hover:text-white p-1 -ml-1" onClick={() => setActiveConv(null)}>
                   <ArrowLeft size={20} />
                 </button>
-                <div className="font-display font-semibold text-white truncate">{activeConv.title}</div>
+                <div className="font-display font-semibold text-white truncate">{activeConv.title || (isTenant ? "Property Owner" : "Conversation")}</div>
               </div>
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                 {messages.length === 0 && <div className="flex items-center justify-center h-full text-navy-500 text-sm">No messages yet. Send the first one!</div>}

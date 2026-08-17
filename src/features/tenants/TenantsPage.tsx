@@ -771,8 +771,10 @@ export default function TenantsPage() {
         });
         if (provisionError || !provisioned?.success) throw new Error(provisionError?.message || provisioned?.error || "Unable to create tenant account.");
         const password = provisioned.temporary_password;
-        window.alert(`Tenant account created successfully.\n\nLogin email: ${form.email.trim().toLowerCase()}\nPhone: ${form.phone.trim()}\nTemporary password: ${password}\n\nShare these credentials securely with the tenant.`);
-        setToast({ msg: "Tenant account created!", type: "success" });
+        setToast({
+          msg: `Tenant account created • Login: ${form.email.trim().toLowerCase()} • Password: ${password}`,
+          type: "success"
+        });
       }
 
       setShowModal(

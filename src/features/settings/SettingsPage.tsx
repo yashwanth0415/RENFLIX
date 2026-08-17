@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import {
   User,
   Building2,
   Shield,
   Mail,
   Phone,
+  LogOut,
 } from "lucide-react";
 
 import { supabase } from "../../lib/supabase";
@@ -67,6 +69,8 @@ export default function SettingsPage() {
     user,
     refreshProfile,
   } = useAuth();
+
+  const navigate = useNavigate();
 
   const [tab, setTab] =
     useState<SettingsTab>(
@@ -1162,6 +1166,26 @@ export default function SettingsPage() {
           </form>
         </Card>
       )}
+
+      <Card className="mt-5 border-red-500/20">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="font-display font-bold text-white">Sign out</h3>
+            <p className="text-xs text-navy-500 mt-1">Sign out of this RENFLIX account on this device.</p>
+          </div>
+          <Button
+            variant="ghost"
+            type="button"
+            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate("/login", { replace: true });
+            }}
+          >
+            <LogOut size={15} /> Sign out
+          </Button>
+        </div>
+      </Card>
 
       {/* ====================================================== */}
       {/* TOAST                                                   */}

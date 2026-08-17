@@ -121,7 +121,7 @@ export function Select({ label, error, options, className = "", id, ...props }: 
       <select
         id={inputId}
         className={`w-full bg-navy-800/80 border ${error ? "border-red-500" : "border-navy-600"} rounded-lg px-3 py-2.5 text-sm text-navy-100 focus:outline-none focus:ring-2 focus:ring-blue-electric focus:border-transparent transition-all appearance-none cursor-pointer ${className}`}
-        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
+        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
         {...props}
       >
         {options.map((o) => (
@@ -196,6 +196,8 @@ const statusColors: Record<string, string> = {
   RENEWED:           "bg-blue-500/15 text-blue-400 border-blue-500/30",
 
   PENDING:           "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  UNDER_REVIEW:      "bg-amber-500/15 text-amber-300 border-amber-400/30",
+  RECEIVED:          "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   SUBMITTED:         "bg-amber-500/15 text-amber-400 border-amber-500/30",
   REVIEWED:          "bg-amber-500/15 text-amber-400 border-amber-500/30",
   SCHEDULED:         "bg-amber-500/15 text-amber-400 border-amber-500/30",
@@ -465,19 +467,22 @@ export function Toast({ message, type = "info", onClose }: ToastProps) {
   }, [onClose]);
 
   return (
-    <div
-      className={`fixed bottom-5 right-5 z-[100] flex items-center gap-3 ${colors[type]} border text-sm font-medium px-4 py-3 rounded-xl shadow-2xl toast-enter max-w-sm backdrop-blur-sm`}
-      style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}
-    >
+    createPortal(
+      <div
+        className={`renflix-toast fixed z-[2147483647] flex items-center gap-3 ${colors[type]} border text-sm font-medium px-4 py-3 rounded-xl shadow-2xl toast-enter max-w-sm backdrop-blur-sm`}
+        style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))", right: "calc(1.25rem + env(safe-area-inset-right))", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}
+      >
       <span className="text-base leading-none">{icons[type]}</span>
       <span className="flex-1">{message}</span>
-      <button
-        onClick={onClose}
-        className="opacity-50 hover:opacity-100 transition-opacity ml-2 hover:scale-110 active:scale-90 transition-transform"
-      >
-        <X size={14} />
-      </button>
-    </div>
+        <button
+          onClick={onClose}
+          className="opacity-50 hover:opacity-100 transition-opacity ml-2 hover:scale-110 active:scale-90 transition-transform"
+        >
+          <X size={14} />
+        </button>
+      </div>,
+      document.body
+    )
   );
 }
 

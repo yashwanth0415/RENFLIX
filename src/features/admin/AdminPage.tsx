@@ -30,6 +30,8 @@ import {
   Bell,
   Menu,
   X,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -221,6 +223,7 @@ profiles: {
     icon: CreditCard,
     columns: [
       { key: "id", label: "ID", type: "text" },
+      { key: "payment_display_id", label: "Payment ID", type: "text" },
       { key: "tenant_id", label: "Tenant ID", type: "text", required: true },
       { key: "unit_id", label: "Unit ID", type: "text" },
       { key: "property_id", label: "Property ID", type: "text" },
@@ -228,8 +231,9 @@ profiles: {
       { key: "due_date", label: "Due Date", type: "date" },
       { key: "paid_date", label: "Paid Date", type: "date" },
       { key: "payment_method", label: "Method", type: "select", options: ["UPI", "CARD", "BANK_TRANSFER", "CASH", "CHEQUE", "OTHER"] },
-      { key: "status", label: "Status", type: "select", options: ["PENDING", "PAID", "PARTIALLY_PAID", "OVERDUE", "WAIVED", "CANCELLED"], required: true },
+      { key: "status", label: "Status", type: "select", options: ["PENDING", "UNDER_REVIEW", "RECEIVED", "PAID", "PARTIALLY_PAID", "OVERDUE", "WAIVED", "CANCELLED"], required: true },
       { key: "organization_id", label: "Org ID", type: "text" },
+      { key: "submission_screenshot_url", label: "Payment Screenshot", type: "text" },
       { key: "created_at", label: "Created", type: "date" },
     ],
     searchFields: [],
@@ -303,6 +307,8 @@ export default function AdminPage() {
 
   const [activeTable, setActiveTable] = useState<TableKey>("organizations");
   const [data, setData] = useState<any[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -320,11 +326,12 @@ export default function AdminPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const tableConfig = TABLE_CONFIGS[activeTable];
-  const filteredData = data.filter((row) =>
-    tableConfig.searchFields.some((field) =>
+  const filteredData = data.filter((row) => {
+    if (!search.trim() || tableConfig.searchFields.length === 0) return true;
+    return tableConfig.searchFields.some((field) =>
       row[field]?.toString().toLowerCase().includes(search.toLowerCase())
-    )
-  );
+    );
+  });
 
   // Initialize auth modal state based on auth status
   useEffect(() => {
@@ -456,18 +463,6 @@ export default function AdminPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this record?")) return;
-
-    try {
-      const { error } = await supabase.from(activeTable).delete().eq("id", id);
-      if (error) throw error;
-      setToast({ msg: "Record deleted!", type: "success" });
-      fetchData();
-    } catch (err: any) {
-      setToast({ msg: err.message || "Delete failed", type: "error" });
-    }
-  }
 
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault();
@@ -661,6 +656,21 @@ export default function AdminPage() {
               <p className="text-navy-400 text-sm mt-1">Manage {tableConfig.label.toLowerCase()} - {totalCount} records</p>
             </div>
             <div className="flex items-center gap-2">
+              {selectionMode ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  className="text-red-400 hover:text-red-300"
+                  disabled={selectedIds.length === 0}
+                >
+                  <Trash2 size={14} className="mr-1" /> Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}
+                </Button>
+              ) : (
+                <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>
+                  <CheckSquare size={14} className="mr-1" /> Select
+                </Button>
+              )}
               <Button variant="secondary" size="sm" onClick={fetchData}>
                 <RefreshCw size={14} className="mr-1" /> Refresh
               </Button>
@@ -696,6 +706,15 @@ export default function AdminPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-navy-700 bg-navy-950/50">
+                        {selectionMode && (
+                          <th className="w-12 px-3 py-3">
+                            <button type="button" onClick={toggleAllVisible} className="text-navy-300">
+                              {filteredData.length > 0 && filteredData.every(row => selectedIds.includes(row.id))
+                                ? <CheckSquare size={17} />
+                                : <Square size={17} />}
+                            </button>
+                          </th>
+                        )}
                         {tableConfig.columns.slice(0, 6).map((col) => (
                           <th key={col.key} className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                             {col.label}
@@ -709,6 +728,13 @@ export default function AdminPage() {
                     <tbody>
                       {filteredData.map((row) => (
                         <tr key={row.id} className="border-b border-navy-700/50 hover:bg-navy-700/30 transition-colors">
+                          {selectionMode && (
+                            <td className="w-12 px-3 py-3">
+                              <button type="button" onClick={() => toggleSelected(row.id)} className="text-navy-300">
+                                {selectedIds.includes(row.id) ? <CheckSquare size={17} /> : <Square size={17} />}
+                              </button>
+                            </td>
+                          )}
                           {tableConfig.columns.slice(0, 6).map((col) => (
                             <td key={col.key} className="px-4 py-3">
                               {col.type === "boolean" ? (
@@ -725,7 +751,7 @@ export default function AdminPage() {
                               <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
                                 <Edit size={14} />
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDelete(row.id)} className="text-red-400 hover:text-red-300">
+                              <Button variant="ghost" size="sm" onClick={() => handleSingleDelete(row.id)} className="text-red-400 hover:text-red-300">
                                 <Trash2 size={14} />
                               </Button>
                             </div>
@@ -835,4 +861,40 @@ export default function AdminPage() {
       </main>
     </div>
   );
+  function toggleSelected(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  function toggleAllVisible() {
+    const ids = filteredData.map(row => row.id);
+    const allSelected = ids.length > 0 && ids.every(id => selectedIds.includes(id));
+    setSelectedIds(allSelected ? [] : Array.from(new Set([...selectedIds, ...ids])));
+  }
+
+  async function handleDeleteSelected() {
+    if (!selectedIds.length) {
+      setToast({ msg: "Select at least one entry.", type: "error" });
+      return;
+    }
+    if (!confirm(`Delete ${selectedIds.length} selected ${tableConfig.label.toLowerCase()}? This permanently removes the database records.`)) return;
+
+    try {
+      const { error } = await supabase.rpc("admin_delete_records", {
+        p_table: activeTable,
+        p_ids: selectedIds,
+      });
+      if (error) throw error;
+      setToast({ msg: `${selectedIds.length} record(s) deleted.`, type: "success" });
+      setSelectedIds([]);
+      setSelectionMode(false);
+      fetchData();
+    } catch (err: any) {
+      setToast({ msg: err.message || "Delete failed", type: "error" });
+    }
+  }
+
+  function handleSingleDelete(id: string) {
+    setSelectedIds([id]);
+    setSelectionMode(true);
+  }
 }
