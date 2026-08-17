@@ -72,20 +72,75 @@ const TABLE_CONFIGS: Record<string, { label: string; icon: any; columns: ColumnC
     ],
     searchFields: ["name"],
   },
-  profiles: {
-    label: "Profiles",
-    icon: UsersIcon,
-    columns: [
-      { key: "id", label: "ID", type: "text" },
-      { key: "full_name", label: "Full Name", type: "text" },
-      { key: "phone", label: "Phone", type: "text" },
-      { key: "avatar_url", label: "Avatar", type: "text" },
-      { key: "role", label: "Role", type: "select", options: ["OWNER", "PROPERTY_MANAGER", "TENANT", "HOSTEL_MANAGER", "TECHNICIAN", "COMMUNITY_MANAGER", "ADMIN"] },
-      { key: "organization_id", label: "Org ID", type: "text" },
-      { key: "created_at", label: "Created", type: "date" },
-    ],
-    searchFields: ["full_name", "phone", "email"],
-  },
+profiles: {
+  label: "Profiles",
+  icon: UsersIcon,
+
+  columns: [
+    {
+      key: "id",
+      label: "ID",
+      type: "text",
+    },
+
+    {
+      key: "full_name",
+      label: "Full Name",
+      type: "text",
+    },
+
+    {
+      key: "email",
+      label: "Email",
+      type: "email",
+    },
+
+    {
+      key: "phone",
+      label: "Phone",
+      type: "text",
+    },
+
+    {
+      key: "avatar_url",
+      label: "Avatar",
+      type: "text",
+    },
+
+    {
+      key: "role",
+      label: "Role",
+      type: "select",
+      options: [
+        "OWNER",
+        "PROPERTY_MANAGER",
+        "TENANT",
+        "HOSTEL_MANAGER",
+        "TECHNICIAN",
+        "COMMUNITY_MANAGER",
+        "ADMIN",
+      ],
+    },
+
+    {
+      key: "organization_id",
+      label: "Org ID",
+      type: "text",
+    },
+
+    {
+      key: "created_at",
+      label: "Created",
+      type: "date",
+    },
+  ],
+
+  searchFields: [
+    "full_name",
+    "email",
+    "phone",
+  ],
+},
   properties: {
     label: "Properties",
     icon: Building2,
@@ -501,9 +556,9 @@ export default function AdminPage() {
               </Button>
             </form>
             {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-            <p className="text-center text-xs text-navy-500 mt-4">
+            {/*<p className="text-center text-xs text-navy-500 mt-4">
               Default: thurpatiyashwanth@gmail.com / Yash@1234
-            </p>
+            </p>*/}
           </div>
         </Card>
       </div>

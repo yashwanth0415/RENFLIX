@@ -9,12 +9,36 @@ export type UserRole =
 
 export interface Profile {
   id: string;
-  full_name: string | null;
+
+  /**
+   * Email address associated with the RENFLIX account.
+   *
+   * This should stay synchronized with:
+   * auth.users.email
+   */
+  email: string | null;
+
+  /**
+   * Indian phone number associated with the RENFLIX account.
+   *
+   * Stored in normalized E.164 format:
+   * +919876543210
+   *
+   * This should stay synchronized with:
+   * auth.users.phone
+   */
   phone: string | null;
+
+  full_name: string | null;
+
   avatar_url: string | null;
+
   role: UserRole;
+
   organization_id: string | null;
+
   created_at: string;
+
   updated_at: string;
 }
 

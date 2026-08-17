@@ -1,12 +1,43 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { Users, Plus, Search, Phone, Mail } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+} from "react-router";
+
+import {
+  Users,
+  Plus,
+  Search,
+  Phone,
+  Mail,
+} from "lucide-react";
+
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
+
 import {
-  Button, Card, StatusBadge, Modal, Input, Select, Textarea, PageHeader, EmptyState, Skeleton, Toast,
+  Button,
+  Card,
+  StatusBadge,
+  Modal,
+  Input,
+  Select,
+  PageHeader,
+  EmptyState,
+  Skeleton,
+  Toast,
 } from "../../components/ui";
-import type { Tenant, TenantStatus, Unit, Property } from "../../lib/types";
+
+import type {
+  Tenant,
+  TenantStatus,
+  Unit,
+  Property,
+} from "../../lib/types";
 
 const defaultForm = {
   full_name: "",
@@ -21,259 +52,1469 @@ const defaultForm = {
 };
 
 export default function TenantsPage() {
-  const { profile } = useAuth();
-  const navigate = useNavigate();
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [filteredUnits, setFilteredUnits] = useState<Unit[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [editTenant, setEditTenant] = useState<Tenant | null>(null);
-  const [form, setForm] = useState(defaultForm);
-  const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const {
+    profile,
+  } = useAuth();
+
+  const navigate =
+    useNavigate();
+
+  // ------------------------------------------------------------
+  // Data
+  // ------------------------------------------------------------
+
+  const [
+    tenants,
+    setTenants,
+  ] = useState<Tenant[]>(
+    []
+  );
+
+  const [
+    properties,
+    setProperties,
+  ] = useState<Property[]>(
+    []
+  );
+
+  const [
+    units,
+    setUnits,
+  ] = useState<Unit[]>(
+    []
+  );
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  // ------------------------------------------------------------
+  // List filters
+  // ------------------------------------------------------------
+
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    filterProp,
+    setFilterProp,
+  ] = useState("");
+
+  // ------------------------------------------------------------
+  // Modal
+  // ------------------------------------------------------------
+
+  const [
+    showModal,
+    setShowModal,
+  ] = useState(false);
+
+  const [
+    editTenant,
+    setEditTenant,
+  ] = useState<Tenant | null>(
+    null
+  );
+
+  const [
+    form,
+    setForm,
+  ] = useState(
+    defaultForm
+  );
+
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
+
+  const [
+    toast,
+    setToast,
+  ] = useState<{
+    msg: string;
+    type:
+      | "success"
+      | "error";
+  } | null>(
+    null
+  );
+
+  // ------------------------------------------------------------
+  // Fetch all tenant/property/unit data
+  // ------------------------------------------------------------
 
   useEffect(() => {
-    if (profile?.organization_id) fetchAll();
-    else setLoading(false);
-  }, [profile]);
-
-  // Filter units based on selected property
-  useEffect(() => {
-    if (form.property_id) {
-      const unitsForProperty = units.filter(u => u.property_id === form.property_id && u.status === "AVAILABLE");
-      setFilteredUnits(unitsForProperty);
+    if (
+      profile?.organization_id
+    ) {
+      fetchAll();
     } else {
-      setFilteredUnits([]);
+      setLoading(false);
     }
-    // Reset unit selection when property changes
-    if (form.unit_id && !filteredUnits.find(u => u.id === form.unit_id)) {
-      setForm(f => ({ ...f, unit_id: "" }));
-    }
-  }, [form.property_id, units]);
+  }, [
+    profile?.organization_id,
+  ]);
 
   async function fetchAll() {
-    const [tenRes, propRes, unitRes] = await Promise.all([
-      supabase.from("tenants").select("*").eq("organization_id", profile!.organization_id!).order("created_at", { ascending: false }),
-      supabase.from("properties").select("*").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE"),
-      supabase.from("units").select("*").in(
-        "property_id",
-        (await supabase.from("properties").select("id").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE")).data?.map(p => p.id) || []
-      ),
-    ]);
-    setTenants(tenRes.data || []);
-    setProperties(propRes.data || []);
-    setUnits(unitRes.data || []);
-    setLoading(false);
+    if (
+      !profile?.organization_id
+    ) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // --------------------------------------------------------
+      // First load properties belonging to this organization.
+      // --------------------------------------------------------
+
+      const {
+        data: propertyData,
+        error: propertyError,
+      } =
+        await supabase
+          .from("properties")
+          .select("*")
+          .eq(
+            "organization_id",
+            profile.organization_id
+          )
+          .eq(
+            "status",
+            "ACTIVE"
+          )
+          .order(
+            "name",
+            {
+              ascending: true,
+            }
+          );
+
+      if (propertyError) {
+        throw propertyError;
+      }
+
+      const activeProperties =
+        (propertyData ||
+          []) as Property[];
+
+      setProperties(
+        activeProperties
+      );
+
+      // --------------------------------------------------------
+      // Property IDs are used to load their units.
+      // --------------------------------------------------------
+
+      const propertyIds =
+        activeProperties.map(
+          (property) =>
+            property.id
+        );
+
+      let unitsData:
+        | Unit[]
+        | null = [];
+
+      if (
+        propertyIds.length >
+        0
+      ) {
+        const {
+          data,
+          error,
+        } =
+          await supabase
+            .from("units")
+            .select("*")
+            .in(
+              "property_id",
+              propertyIds
+            )
+            .order(
+              "unit_number",
+              {
+                ascending: true,
+              }
+            );
+
+        if (error) {
+          throw error;
+        }
+
+        unitsData =
+          (data ||
+            []) as Unit[];
+      }
+
+      setUnits(
+        unitsData
+      );
+
+      // --------------------------------------------------------
+      // Load tenants for the organization.
+      // --------------------------------------------------------
+
+      const {
+        data: tenantData,
+        error: tenantError,
+      } =
+        await supabase
+          .from("tenants")
+          .select("*")
+          .eq(
+            "organization_id",
+            profile.organization_id
+          )
+          .order(
+            "created_at",
+            {
+              ascending: false,
+            }
+          );
+
+      if (tenantError) {
+        throw tenantError;
+      }
+
+      setTenants(
+        (tenantData ||
+          []) as Tenant[]
+      );
+    } catch (error) {
+      console.error(
+        "RENFLIX tenants fetch error:",
+        error
+      );
+
+      setToast({
+        msg:
+          error instanceof Error
+            ? error.message
+            : "Unable to load tenants.",
+        type:
+          "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
+
+  // ------------------------------------------------------------
+  // Property lookup for a tenant
+  // ------------------------------------------------------------
+  //
+  // tenant.unit_id
+  //       ↓
+  // units.id
+  //       ↓
+  // units.property_id
+  //
+  // ------------------------------------------------------------
+
+  function getPropertyIdForTenant(
+    tenant: Tenant
+  ): string {
+    if (!tenant.unit_id) {
+      return "";
+    }
+
+    const unit =
+      units.find(
+        (item) =>
+          item.id ===
+          tenant.unit_id
+      );
+
+    return (
+      unit?.property_id ||
+      ""
+    );
+  }
+
+  // ------------------------------------------------------------
+  // Unit lookup
+  // ------------------------------------------------------------
+
+  function getUnitForTenant(
+    tenant: Tenant
+  ): Unit | undefined {
+    if (!tenant.unit_id) {
+      return undefined;
+    }
+
+    return units.find(
+      (unit) =>
+        unit.id ===
+        tenant.unit_id
+    );
+  }
+
+  // ------------------------------------------------------------
+  // Property options
+  // ------------------------------------------------------------
+
+  const propertyOptions =
+    useMemo(
+      () => [
+        {
+          value: "",
+          label:
+            "All properties",
+        },
+        ...properties.map(
+          (
+            property
+          ) => ({
+            value:
+              property.id,
+            label:
+              property.name,
+          })
+        ),
+      ],
+      [properties]
+    );
+
+  // ------------------------------------------------------------
+  // Filter tenants
+  // ------------------------------------------------------------
+
+  const filteredTenants =
+    useMemo(() => {
+      const searchValue =
+        search
+          .trim()
+          .toLowerCase();
+
+      return tenants.filter(
+        (tenant) => {
+          // ----------------------------------------------
+          // Search filter
+          // ----------------------------------------------
+
+          const matchesSearch =
+            !searchValue ||
+            tenant.full_name
+              .toLowerCase()
+              .includes(
+                searchValue
+              ) ||
+            (
+              tenant.phone ||
+              ""
+            )
+              .toLowerCase()
+              .includes(
+                searchValue
+              ) ||
+            (
+              tenant.email ||
+              ""
+            )
+              .toLowerCase()
+              .includes(
+                searchValue
+              );
+
+          // ----------------------------------------------
+          // Property filter
+          // ----------------------------------------------
+
+          const tenantPropertyId =
+            getPropertyIdForTenant(
+              tenant
+            );
+
+          const matchesProperty =
+            !filterProp ||
+            tenantPropertyId ===
+              filterProp;
+
+          return (
+            matchesSearch &&
+            matchesProperty
+          );
+        }
+      );
+    }, [
+      tenants,
+      units,
+      search,
+      filterProp,
+    ]);
+
+  // ------------------------------------------------------------
+  // Filter units inside Add/Edit modal
+  // ------------------------------------------------------------
+
+  const filteredUnits =
+    useMemo(() => {
+      if (!form.property_id) {
+        return [];
+      }
+
+      const availableUnits =
+        units.filter(
+          (unit) =>
+            unit.property_id ===
+              form.property_id &&
+            (
+              unit.status ===
+                "AVAILABLE" ||
+              unit.id ===
+                form.unit_id
+            )
+        );
+
+      return availableUnits;
+    }, [
+      units,
+      form.property_id,
+      form.unit_id,
+    ]);
+
+  // ------------------------------------------------------------
+  // Open Add Tenant
+  // ------------------------------------------------------------
 
   function openAdd() {
     setEditTenant(null);
-    setForm(defaultForm);
-    setShowModal(true);
-  }
 
-  function openEdit(t: Tenant) {
-    setEditTenant(t);
-    // Find the property for this tenant's unit
-    let propertyId = "";
-    if (t.unit_id) {
-      const unit = units.find(u => u.id === t.unit_id);
-      propertyId = unit?.property_id || "";
-    }
     setForm({
-      full_name: t.full_name,
-      email: t.email || "",
-      phone: t.phone,
-      emergency_contact_name: t.emergency_contact_name || "",
-      emergency_contact_phone: t.emergency_contact_phone || "",
-      property_id: propertyId,
-      unit_id: t.unit_id || "",
-      move_in_date: t.move_in_date || "",
-      status: t.status,
+      ...defaultForm,
+      property_id:
+        filterProp ||
+        "",
+      unit_id: "",
     });
-    setShowModal(true);
+
+    setShowModal(
+      true
+    );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  // ------------------------------------------------------------
+  // Open Edit Tenant
+  // ------------------------------------------------------------
+
+  function openEdit(
+    tenant: Tenant
+  ) {
+    setEditTenant(
+      tenant
+    );
+
+    const propertyId =
+      getPropertyIdForTenant(
+        tenant
+      );
+
+    setForm({
+      full_name:
+        tenant.full_name,
+
+      email:
+        tenant.email ||
+        "",
+
+      phone:
+        tenant.phone,
+
+      emergency_contact_name:
+        tenant.emergency_contact_name ||
+        "",
+
+      emergency_contact_phone:
+        tenant.emergency_contact_phone ||
+        "",
+
+      property_id:
+        propertyId,
+
+      unit_id:
+        tenant.unit_id ||
+        "",
+
+      move_in_date:
+        tenant.move_in_date ||
+        "",
+
+      status:
+        tenant.status,
+    });
+
+    setShowModal(
+      true
+    );
+  }
+
+  // ------------------------------------------------------------
+  // Handle property change inside modal
+  // ------------------------------------------------------------
+
+  function handlePropertyChange(
+    propertyId: string
+  ) {
+    setForm(
+      (current) => ({
+        ...current,
+        property_id:
+          propertyId,
+        unit_id: "",
+      })
+    );
+  }
+
+  // ------------------------------------------------------------
+  // Handle tenant save
+  // ------------------------------------------------------------
+
+  async function handleSubmit(
+    e: React.FormEvent
+  ) {
     e.preventDefault();
-    setSubmitting(true);
-    const payload = {
-      organization_id: profile!.organization_id!,
-      full_name: form.full_name,
-      email: form.email || null,
-      phone: form.phone,
-      emergency_contact_name: form.emergency_contact_name || null,
-      emergency_contact_phone: form.emergency_contact_phone || null,
-      unit_id: form.unit_id || null,
-      move_in_date: form.move_in_date || null,
-      status: form.status,
-    };
 
-    if (editTenant) {
-      const { error } = await supabase.from("tenants").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", editTenant.id);
-      if (error) setToast({ msg: error.message, type: "error" });
-      else {
-        // Update unit status if assigned
-        if (form.unit_id && form.status === "ACTIVE") {
-          await supabase.from("units").update({ status: "OCCUPIED" }).eq("id", form.unit_id);
-        }
-        // If unit changed, free up old unit
-        if (editTenant.unit_id && editTenant.unit_id !== form.unit_id) {
-          await supabase.from("units").update({ status: "AVAILABLE" }).eq("id", editTenant.unit_id);
-        }
-        setToast({ msg: "Tenant updated!", type: "success" }); setShowModal(false); fetchAll();
-      }
-    } else {
-      const { error } = await supabase.from("tenants").insert(payload);
-      if (error) setToast({ msg: error.message, type: "error" });
-      else {
-        if (form.unit_id) await supabase.from("units").update({ status: "OCCUPIED" }).eq("id", form.unit_id);
-        setToast({ msg: "Tenant added!", type: "success" }); setShowModal(false); fetchAll();
-      }
+    if (
+      !profile?.organization_id
+    ) {
+      setToast({
+        msg:
+          "No organization is associated with your account.",
+        type:
+          "error",
+      });
+
+      return;
     }
-    setSubmitting(false);
+
+    setSubmitting(true);
+    setToast(null);
+
+    try {
+      // --------------------------------------------------------
+      // Verify selected unit belongs to selected property.
+      // --------------------------------------------------------
+
+      if (
+        form.property_id &&
+        form.unit_id
+      ) {
+        const selectedUnit =
+          units.find(
+            (unit) =>
+              unit.id ===
+              form.unit_id
+          );
+
+        if (
+          !selectedUnit ||
+          selectedUnit.property_id !==
+            form.property_id
+        ) {
+          throw new Error(
+            "The selected unit does not belong to the selected property."
+          );
+        }
+      }
+
+      const payload = {
+        organization_id:
+          profile.organization_id,
+
+        full_name:
+          form.full_name.trim(),
+
+        email:
+          form.email.trim()
+            ? form.email
+                .trim()
+                .toLowerCase()
+            : null,
+
+        phone:
+          form.phone.trim(),
+
+        emergency_contact_name:
+          form.emergency_contact_name.trim() ||
+          null,
+
+        emergency_contact_phone:
+          form.emergency_contact_phone.trim() ||
+          null,
+
+        unit_id:
+          form.unit_id ||
+          null,
+
+        move_in_date:
+          form.move_in_date ||
+          null,
+
+        status:
+          form.status,
+      };
+
+      // --------------------------------------------------------
+      // Update existing tenant
+      // --------------------------------------------------------
+
+      if (
+        editTenant
+      ) {
+        const {
+          error,
+        } =
+          await supabase
+            .from("tenants")
+            .update({
+              ...payload,
+              updated_at:
+                new Date().toISOString(),
+            })
+            .eq(
+              "id",
+              editTenant.id
+            );
+
+        if (error) {
+          throw error;
+        }
+
+        // ------------------------------------------------------
+        // Mark newly assigned unit occupied
+        // ------------------------------------------------------
+
+        if (
+          form.unit_id &&
+          form.status ===
+            "ACTIVE"
+        ) {
+          await supabase
+            .from("units")
+            .update({
+              status:
+                "OCCUPIED",
+            })
+            .eq(
+              "id",
+              form.unit_id
+            );
+        }
+
+        // ------------------------------------------------------
+        // Free previous unit if the tenant changed units
+        // ------------------------------------------------------
+
+        if (
+          editTenant.unit_id &&
+          editTenant.unit_id !==
+            form.unit_id
+        ) {
+          await supabase
+            .from("units")
+            .update({
+              status:
+                "AVAILABLE",
+            })
+            .eq(
+              "id",
+              editTenant.unit_id
+            );
+        }
+
+        setToast({
+          msg:
+            "Tenant updated!",
+          type:
+            "success",
+        });
+      }
+
+      // --------------------------------------------------------
+      // Add new tenant
+      // --------------------------------------------------------
+
+      else {
+        const {
+          error,
+        } =
+          await supabase
+            .from("tenants")
+            .insert(
+              payload
+            );
+
+        if (error) {
+          throw error;
+        }
+
+        // ------------------------------------------------------
+        // Assigned unit becomes occupied
+        // ------------------------------------------------------
+
+        if (
+          form.unit_id &&
+          form.status ===
+            "ACTIVE"
+        ) {
+          await supabase
+            .from("units")
+            .update({
+              status:
+                "OCCUPIED",
+            })
+            .eq(
+              "id",
+              form.unit_id
+            );
+        }
+
+        setToast({
+          msg:
+            "Tenant added!",
+          type:
+            "success",
+        });
+      }
+
+      setShowModal(
+        false
+      );
+
+      setForm(
+        defaultForm
+      );
+
+      setEditTenant(
+        null
+      );
+
+      await fetchAll();
+    } catch (error) {
+      console.error(
+        "RENFLIX tenant save error:",
+        error
+      );
+
+      setToast({
+        msg:
+          error instanceof Error
+            ? error.message
+            : "Unable to save tenant.",
+        type:
+          "error",
+      });
+    } finally {
+      setSubmitting(
+        false
+      );
+    }
   }
 
-  const filtered = tenants.filter(
-    (t) =>
-      t.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      (t.phone || "").includes(search) ||
-      (t.email || "").toLowerCase().includes(search.toLowerCase())
-  );
+  // ------------------------------------------------------------
+  // Active tenant count
+  // ------------------------------------------------------------
+
+  const activeTenantCount =
+    tenants.filter(
+      (tenant) =>
+        tenant.status ===
+        "ACTIVE"
+    ).length;
+
+  // ------------------------------------------------------------
+  // Render
+  // ------------------------------------------------------------
 
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="Tenants"
-        subtitle={`${tenants.filter(t => t.status === "ACTIVE").length} active tenants`}
+        subtitle={`${activeTenantCount} active tenants`}
         action={
-          <Button onClick={openAdd} size="sm"><Plus size={16} /> Add Tenant</Button>
+          <Button
+            onClick={
+              openAdd
+            }
+            size="sm"
+          >
+            <Plus size={16} />
+            Add Tenant
+          </Button>
         }
       />
 
-      <div className="relative mb-5">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500" />
-        <input
-          className="w-full bg-navy-800 border border-navy-700 rounded-lg pl-9 pr-4 py-2.5 text-sm text-navy-100 placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-blue-electric"
-          placeholder="Search by name, phone, or email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {/* ====================================================== */}
+      {/* SEARCH + PROPERTY FILTER                               */}
+      {/* ====================================================== */}
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        {/* Search */}
+
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500"
+          />
+
+          <input
+            className="w-full bg-navy-800 border border-navy-700 rounded-lg pl-9 pr-4 py-2.5 text-sm text-navy-100 placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-blue-electric"
+            placeholder="Search by name, phone, or email..."
+            value={
+              search
+            }
+            onChange={(
+              e
+            ) =>
+              setSearch(
+                e.target
+                  .value
+              )
+            }
+          />
+        </div>
+
+        {/* Property filter */}
+
+        <select
+          className="bg-navy-800 border border-navy-700 rounded-lg px-3 py-2.5 text-sm text-navy-100 focus:outline-none focus:ring-2 focus:ring-blue-electric min-w-[190px]"
+          value={
+            filterProp
+          }
+          onChange={(
+            e
+          ) =>
+            setFilterProp(
+              e.target
+                .value
+            )
+          }
+        >
+          {propertyOptions.map(
+            (
+              option
+            ) => (
+              <option
+                key={
+                  option.value
+                }
+                value={
+                  option.value
+                }
+              >
+                {
+                  option.label
+                }
+              </option>
+            )
+          )}
+        </select>
       </div>
 
+      {/* ====================================================== */}
+      {/* ACTIVE FILTER INDICATOR                                */}
+      {/* ====================================================== */}
+
+      {filterProp && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-xs text-navy-500">
+            Showing tenants in:
+          </span>
+
+          <span className="text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-full px-3 py-1">
+            {
+              properties.find(
+                (property) =>
+                  property.id ===
+                  filterProp
+              )?.name ||
+              "Selected property"
+            }
+          </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              setFilterProp(
+                ""
+              )
+            }
+            className="text-xs text-navy-500 hover:text-white transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
+      {/* ====================================================== */}
+      {/* LIST                                                    */}
+      {/* ====================================================== */}
+
       {loading ? (
-        <div className="flex flex-col gap-2">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
-      ) : filtered.length === 0 ? (
+        <div className="flex flex-col gap-2">
+          {[
+            ...Array(6),
+          ].map(
+            (_, index) => (
+              <Skeleton
+                key={
+                  index
+                }
+                className="h-20"
+              />
+            )
+          )}
+        </div>
+      ) : filteredTenants.length ===
+        0 ? (
         <Card>
           <EmptyState
-            icon={<Users size={28} />}
-            title="No tenants yet"
-            description="Add your first tenant to start tracking rent and maintenance."
-            action={<Button onClick={openAdd} size="sm"><Plus size={14} /> Add Tenant</Button>}
+            icon={
+              <Users
+                size={28}
+              />
+            }
+            title={
+              filterProp
+                ? "No tenants in this property"
+                : "No tenants yet"
+            }
+            description={
+              filterProp
+                ? "No tenant is currently assigned to a unit in the selected property."
+                : "Add your first tenant to start tracking rent and maintenance."
+            }
+            action={
+              <Button
+                onClick={
+                  openAdd
+                }
+                size="sm"
+              >
+                <Plus
+                  size={14}
+                />
+                Add Tenant
+              </Button>
+            }
           />
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((t) => (
-            <div
-              key={t.id}
-              className="bg-navy-800 border border-navy-700 rounded-xl p-4 card-hover group cursor-pointer"
-              onClick={() => navigate(`/tenants/${t.tenant_display_id || t.id}`)}
-            >
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-bold text-white">{t.full_name[0].toUpperCase()}</span>
+          {filteredTenants.map(
+            (
+              tenant
+            ) => {
+              const unit =
+                getUnitForTenant(
+                  tenant
+                );
+
+              const propertyId =
+                getPropertyIdForTenant(
+                  tenant
+                );
+
+              const property =
+                properties.find(
+                  (
+                    item
+                  ) =>
+                    item.id ===
+                    propertyId
+                );
+
+              return (
+                <div
+                  key={
+                    tenant.id
+                  }
+                  className="bg-navy-800 border border-navy-700 rounded-xl p-4 card-hover group cursor-pointer"
+                  onClick={() =>
+                    navigate(
+                      `/tenants/${
+                        tenant.tenant_display_id ||
+                        tenant.id
+                      }`
+                    )
+                  }
+                >
+                  {/* Header */}
+
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-white">
+                        {tenant.full_name
+                          .trim()
+                          .charAt(
+                            0
+                          )
+                          .toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="font-display font-semibold text-white truncate">
+                        {
+                          tenant.full_name
+                        }
+                      </div>
+
+                      <StatusBadge
+                        status={
+                          tenant.status
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Contact */}
+
+                  <div className="flex flex-col gap-1">
+                    {tenant.phone && (
+                      <div className="flex items-center gap-2 text-xs text-navy-400">
+                        <Phone
+                          size={
+                            11
+                          }
+                        />
+
+                        <span>
+                          {
+                            tenant.phone
+                          }
+                        </span>
+                      </div>
+                    )}
+
+                    {tenant.email && (
+                      <div className="flex items-center gap-2 text-xs text-navy-400">
+                        <Mail
+                          size={
+                            11
+                          }
+                        />
+
+                        <span className="truncate">
+                          {
+                            tenant.email
+                          }
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Property */}
+
+                   {/* {property && (
+                      <div className="text-xs text-blue-400 mt-1 truncate">
+                        Property:{" "}
+                        {
+                          property.name
+                        }
+                      </div>
+                    )}*/}
+
+                    {/* Unit */}
+
+                   {/* {unit && (
+                      <div className="text-xs text-navy-400">
+                        Unit:{" "}
+                        {
+                          unit.unit_number
+                        }
+                      </div>
+                    )}*/}
+
+                   {/* {tenant.tenant_display_id && (
+                      <div className="text-xs text-navy-500 font-mono">
+                        ID:{" "}
+                        {
+                          tenant.tenant_display_id
+                        }
+                      </div>
+                    )}*/}
+
+                    {/*{tenant.move_in_date && (
+                      <div className="text-xs text-navy-500 mt-1">
+                        Move-in:{" "}
+                        {new Date(
+                          tenant.move_in_date
+                        ).toLocaleDateString(
+                          "en-IN"
+                        )}
+                      </div>
+                    )}*/}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-display font-semibold text-white truncate">{t.full_name}</div>
-                  <StatusBadge status={t.status} />
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                {t.phone && (
-                  <div className="flex items-center gap-2 text-xs text-navy-400">
-                    <Phone size={11} />
-                    <span>{t.phone}</span>
-                  </div>
-                )}
-                {t.email && (
-                  <div className="flex items-center gap-2 text-xs text-navy-400">
-                    <Mail size={11} />
-                    <span className="truncate">{t.email}</span>
-                  </div>
-                )}
-                {t.tenant_display_id && (
-                  <div className="text-xs text-navy-500 font-mono">ID: {t.tenant_display_id}</div>
-                )}
-                {t.move_in_date && (
-                  <div className="text-xs text-navy-500 mt-1">
-                    Move-in: {new Date(t.move_in_date).toLocaleDateString("en-IN")}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+              );
+            }
+          )}
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editTenant ? "Edit Tenant" : "Add Tenant"} width="max-w-lg">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input label="Full name" placeholder="Arjun Kumar" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} required />
+      {/* ====================================================== */}
+      {/* ADD / EDIT TENANT MODAL                                 */}
+      {/* ====================================================== */}
+
+      <Modal
+        open={
+          showModal
+        }
+        onClose={() => {
+          if (
+            !submitting
+          ) {
+            setShowModal(
+              false
+            );
+          }
+        }}
+        title={
+          editTenant
+            ? "Edit Tenant"
+            : "Add Tenant"
+        }
+        width="max-w-lg"
+      >
+        <form
+          onSubmit={
+            handleSubmit
+          }
+          className="flex flex-col gap-4"
+        >
+          <Input
+            label="Full name"
+            placeholder="Arjun Kumar"
+            value={
+              form.full_name
+            }
+            onChange={(
+              e
+            ) =>
+              setForm(
+                (
+                  current
+                ) => ({
+                  ...current,
+                  full_name:
+                    e.target
+                      .value,
+                })
+              )
+            }
+            required
+          />
+
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Phone" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} required />
-            <Input label="Email" type="email" placeholder="arjun@email.com" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
+            <Input
+              label="Phone"
+              type="tel"
+              placeholder="+91 98765 43210"
+              value={
+                form.phone
+              }
+              onChange={(
+                e
+              ) =>
+                setForm(
+                  (
+                    current
+                  ) => ({
+                    ...current,
+                    phone:
+                      e.target
+                        .value,
+                  })
+                )
+              }
+              required
+            />
+
+            <Input
+              label="Email"
+              type="email"
+              placeholder="arjun@email.com"
+              value={
+                form.email
+              }
+              onChange={(
+                e
+              ) =>
+                setForm(
+                  (
+                    current
+                  ) => ({
+                    ...current,
+                    email:
+                      e.target
+                        .value,
+                  })
+                )
+              }
+            />
           </div>
+
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Emergency contact" placeholder="Contact name" value={form.emergency_contact_name} onChange={(e) => setForm(f => ({ ...f, emergency_contact_name: e.target.value }))} />
-            <Input label="Emergency phone" type="tel" value={form.emergency_contact_phone} onChange={(e) => setForm(f => ({ ...f, emergency_contact_phone: e.target.value }))} />
+            <Input
+              label="Emergency contact"
+              placeholder="Contact name"
+              value={
+                form.emergency_contact_name
+              }
+              onChange={(
+                e
+              ) =>
+                setForm(
+                  (
+                    current
+                  ) => ({
+                    ...current,
+                    emergency_contact_name:
+                      e.target
+                        .value,
+                  })
+                )
+              }
+            />
+
+            <Input
+              label="Emergency phone"
+              type="tel"
+              value={
+                form.emergency_contact_phone
+              }
+              onChange={(
+                e
+              ) =>
+                setForm(
+                  (
+                    current
+                  ) => ({
+                    ...current,
+                    emergency_contact_phone:
+                      e.target
+                        .value,
+                  })
+                )
+              }
+            />
           </div>
-          
-          {/* Property Selection */}
-          {properties.length > 0 && (
+
+          {/* Property */}
+
+          {properties.length >
+            0 && (
             <Select
               label="Property *"
-              value={form.property_id}
-              onChange={(e) => setForm(f => ({ ...f, property_id: e.target.value }))}
-              options={[{ value: "", label: "Select a property" }, ...properties.map((p) => ({ value: p.id, label: p.name }))]}
+              value={
+                form.property_id
+              }
+              onChange={(
+                e
+              ) =>
+                handlePropertyChange(
+                  e.target
+                    .value
+                )
+              }
+              options={[
+                {
+                  value:
+                    "",
+                  label:
+                    "Select a property",
+                },
+                ...properties.map(
+                  (
+                    property
+                  ) => ({
+                    value:
+                      property.id,
+                    label:
+                      property.name,
+                  })
+                ),
+              ]}
               required
             />
           )}
-          
-          {/* Unit Selection (filtered by property) */}
-          {filteredUnits.length > 0 && (
+
+          {/* Unit */}
+
+          {form.property_id && (
             <Select
               label="Unit *"
-              value={form.unit_id}
-              onChange={(e) => setForm(f => ({ ...f, unit_id: e.target.value }))}
-              options={[{ value: "", label: "Select a unit" }, ...filteredUnits.map((u) => ({ value: u.id, label: `${u.unit_number}${u.name ? ` — ${u.name}` : ""} (₹${u.monthly_rent?.toLocaleString("en-IN")}/mo)` }))]}
+              value={
+                form.unit_id
+              }
+              onChange={(
+                e
+              ) =>
+                setForm(
+                  (
+                    current
+                  ) => ({
+                    ...current,
+                    unit_id:
+                      e.target
+                        .value,
+                  })
+                )
+              }
+              options={[
+                {
+                  value:
+                    "",
+                  label:
+                    filteredUnits.length >
+                    0
+                      ? "Select a unit"
+                      : "No available units",
+                },
+                ...filteredUnits.map(
+                  (
+                    unit
+                  ) => ({
+                    value:
+                      unit.id,
+                    label:
+                      `${unit.unit_number}${
+                        unit.name
+                          ? ` — ${unit.name}`
+                          : ""
+                      } (₹${unit.monthly_rent?.toLocaleString(
+                        "en-IN"
+                      )}/mo)`,
+                  })
+                ),
+              ]}
               required
+              disabled={
+                filteredUnits.length ===
+                0
+              }
             />
           )}
-          
+
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Move-in date" type="date" value={form.move_in_date} onChange={(e) => setForm(f => ({ ...f, move_in_date: e.target.value }))} />
+            <Input
+              label="Move-in date"
+              type="date"
+              value={
+                form.move_in_date
+              }
+              onChange={(
+                e
+              ) =>
+                setForm(
+                  (
+                    current
+                  ) => ({
+                    ...current,
+                    move_in_date:
+                      e.target
+                        .value,
+                  })
+                )
+              }
+            />
+
             <Select
               label="Status"
-              value={form.status}
-              onChange={(e) => setForm(f => ({ ...f, status: e.target.value as TenantStatus }))}
+              value={
+                form.status
+              }
+              onChange={(
+                e
+              ) =>
+                setForm(
+                  (
+                    current
+                  ) => ({
+                    ...current,
+                    status:
+                      e.target
+                        .value as TenantStatus,
+                  })
+                )
+              }
               options={[
-                { value: "ACTIVE", label: "Active" },
-                { value: "INACTIVE", label: "Inactive" },
-                { value: "FORMER", label: "Former" },
+                {
+                  value:
+                    "ACTIVE",
+                  label:
+                    "Active",
+                },
+                {
+                  value:
+                    "INACTIVE",
+                  label:
+                    "Inactive",
+                },
+                {
+                  value:
+                    "FORMER",
+                  label:
+                    "Former",
+                },
               ]}
             />
           </div>
+
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="ghost" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" loading={submitting}>{editTenant ? "Update" : "Add Tenant"}</Button>
+            <Button
+              variant="ghost"
+              type="button"
+              disabled={
+                submitting
+              }
+              onClick={() =>
+                setShowModal(
+                  false
+                )
+              }
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="submit"
+              loading={
+                submitting
+              }
+            >
+              {editTenant
+                ? "Update"
+                : "Add Tenant"}
+            </Button>
           </div>
         </form>
       </Modal>
 
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {/* Toast */}
+
+      {toast && (
+        <Toast
+          message={
+            toast.msg
+          }
+          type={
+            toast.type
+          }
+          onClose={() =>
+            setToast(
+              null
+            )
+          }
+        />
+      )}
     </div>
   );
 }

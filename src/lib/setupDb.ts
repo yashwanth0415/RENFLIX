@@ -1,59 +1,145 @@
-import { projectId } from "../../utils/supabase/info";
 import { supabase } from "./supabase";
 
-const SERVER_BASE = `https://${projectId}.supabase.co/functions/v1/server`;
-const SETUP_KEY = "renflix_db_ready_v3";
+const DB_READY_KEY = "renflix_db_ready_v4";
 
-/** Returns true if the profiles table exists and is accessible */
-async function checkTablesExist(): Promise<boolean> {
-  const { error } = await supabase.from("profiles").select("id").limit(1);
-  // PGRST205 = table not found, 42P01 = table doesn't exist
-  if (error?.code === "PGRST205" || error?.message?.includes("does not exist")) return false;
-  return true;
-}
-
-/** Call server to run migration SQL via service role */
-async function runMigration(): Promise<{ ok: boolean; message: string }> {
+/**
+ * Check whether the RENFLIX profiles table is available.
+ *
+ * Database schema should be created through Supabase migrations.
+ * This helper only verifies that the application can access it.
+ */
+async function checkTablesExist(): Promise<{
+  exists: boolean;
+  errorCode?: string;
+  message?: string;
+}> {
   try {
-    const res = await fetch(`${SERVER_BASE}/setup-db`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) return { ok: false, message: `Server error: ${res.status}` };
-    const data = await res.json();
-    return { ok: !!data.success, message: data.message || "Unknown" };
-  } catch (err: any) {
-    return { ok: false, message: `Cannot reach server: ${err.message}` };
+    const { error } = await supabase
+      .from("profiles")
+      .select("id")
+      .limit(1);
+
+    if (!error) {
+      return {
+        exists: true,
+      };
+    }
+
+    if (
+      error.code === "PGRST205" ||
+      error.code === "42P01" ||
+      error.message
+        ?.toLowerCase()
+        .includes("does not exist")
+    ) {
+      return {
+        exists: false,
+        errorCode: error.code,
+        message: error.message,
+      };
+    }
+
+    /*
+     * An RLS/permission error does not mean that the table
+     * is missing.
+     *
+     * The application should not try to create the database
+     * in response to such an error.
+     */
+    return {
+      exists: true,
+      errorCode: error.code,
+      message: error.message,
+    };
+  } catch (error) {
+    return {
+      exists: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unable to verify database.",
+    };
   }
 }
 
-export async function ensureDbReady(): Promise<{ ok: boolean; message: string; needsRedeploy?: boolean }> {
-  // Already verified this session
-  if (sessionStorage.getItem(SETUP_KEY) === "1") return { ok: true, message: "Ready" };
+/**
+ * Verify that the required RENFLIX database schema exists.
+ *
+ * IMPORTANT:
+ * This function no longer calls the application's
+ * /setup-db Edge Function.
+ *
+ * Database creation/update must happen through:
+ *
+ * supabase/migrations/*.sql
+ */
+export async function ensureDbReady(): Promise<{
+  ok: boolean;
+  message: string;
+  needsRedeploy?: boolean;
+}> {
+  // ------------------------------------------------------------
+  // Avoid repeatedly checking the database in the same session.
+  // ------------------------------------------------------------
 
-  // First check if tables already exist
-  const exists = await checkTablesExist();
-  if (exists) {
-    sessionStorage.setItem(SETUP_KEY, "1");
-    return { ok: true, message: "Database ready" };
+  if (
+    sessionStorage.getItem(DB_READY_KEY) === "1"
+  ) {
+    return {
+      ok: true,
+      message: "Database ready",
+    };
   }
 
-  // Tables missing — try migration via server
-  const result = await runMigration();
+  // ------------------------------------------------------------
+  // Verify database access.
+  // ------------------------------------------------------------
 
-  if (result.ok) {
-    // Verify again
-    const verified = await checkTablesExist();
-    if (verified) {
-      sessionStorage.setItem(SETUP_KEY, "1");
-      return { ok: true, message: "Database initialized ✓" };
-    }
+  const result =
+    await checkTablesExist();
+
+  // ------------------------------------------------------------
+  // Database exists and can be accessed.
+  // ------------------------------------------------------------
+
+  if (result.exists) {
+    sessionStorage.setItem(
+      DB_READY_KEY,
+      "1"
+    );
+
+    return {
+      ok: true,
+      message: "Database ready",
+    };
   }
 
-  // Migration failed — likely server not redeployed yet
+  // ------------------------------------------------------------
+  // Database schema is missing.
+  //
+  // DO NOT attempt to create it from the browser.
+  // ------------------------------------------------------------
+
+  console.error(
+    "RENFLIX database schema is not available.",
+    result
+  );
+
   return {
     ok: false,
-    message: result.message,
-    needsRedeploy: result.message.includes("Cannot reach") || result.message.includes("not found"),
+    message:
+      "RENFLIX database is not initialized. Apply the Supabase migrations before using the application.",
+    needsRedeploy: false,
   };
+}
+
+/**
+ * Clear the local database-ready cache.
+ *
+ * Useful during development after applying new migrations.
+ */
+export function clearDbReadyCache(): void {
+  sessionStorage.removeItem(
+    DB_READY_KEY
+  );
 }

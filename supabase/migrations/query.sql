@@ -70,27 +70,90 @@ CREATE TABLE public.organizations (
 CREATE INDEX idx_organizations_owner ON public.organizations(owner_id);
 
 CREATE TABLE public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name TEXT,
+  id UUID PRIMARY KEY
+    REFERENCES auth.users(id)
+    ON DELETE CASCADE,
+
+  -- Authentication identifiers
+  email TEXT,
   phone TEXT,
+
+  -- Profile information
+  full_name TEXT,
   avatar_url TEXT,
+
+  -- RENFLIX role
   role TEXT NOT NULL DEFAULT 'OWNER'
-    CHECK (role IN (
-      'OWNER',
-      'PROPERTY_MANAGER',
-      'TENANT',
-      'HOSTEL_MANAGER',
-      'TECHNICIAN',
-      'COMMUNITY_MANAGER',
-      'ADMIN'
-    )),
-  organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    CHECK (
+      role IN (
+        'OWNER',
+        'PROPERTY_MANAGER',
+        'TENANT',
+        'HOSTEL_MANAGER',
+        'TECHNICIAN',
+        'COMMUNITY_MANAGER',
+        'ADMIN'
+      )
+    ),
+
+  -- Organization
+  organization_id UUID
+    REFERENCES public.organizations(id)
+    ON DELETE SET NULL,
+
+  created_at TIMESTAMPTZ NOT NULL
+    DEFAULT now(),
+
+  updated_at TIMESTAMPTZ NOT NULL
+    DEFAULT now()
 );
 
-CREATE INDEX idx_profiles_org ON public.profiles(organization_id);
-CREATE INDEX idx_profiles_role ON public.profiles(role);
+-- ------------------------------------------------------------
+-- Profile indexes
+-- ------------------------------------------------------------
+
+CREATE INDEX idx_profiles_org
+ON public.profiles(organization_id);
+
+CREATE INDEX idx_profiles_role
+ON public.profiles(role);
+
+-- ------------------------------------------------------------
+-- Email uniqueness
+-- ------------------------------------------------------------
+--
+-- Case-insensitive:
+-- Test@Gmail.com = test@gmail.com
+--
+-- NULL is allowed before onboarding is completed.
+-- ------------------------------------------------------------
+
+CREATE UNIQUE INDEX profiles_email_unique
+ON public.profiles (LOWER(email))
+WHERE email IS NOT NULL
+  AND BTRIM(email) <> '';
+
+CREATE INDEX idx_profiles_email
+ON public.profiles (LOWER(email));
+
+-- ------------------------------------------------------------
+-- Phone uniqueness
+-- ------------------------------------------------------------
+--
+-- The application stores Indian numbers in:
+--
+-- +919876543210
+--
+-- NULL is allowed before onboarding is completed.
+-- ------------------------------------------------------------
+
+CREATE UNIQUE INDEX profiles_phone_unique
+ON public.profiles (phone)
+WHERE phone IS NOT NULL
+  AND BTRIM(phone) <> '';
+
+CREATE INDEX idx_profiles_phone
+ON public.profiles(phone);
 
 CREATE TABLE public.properties (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -511,20 +574,29 @@ TO authenticated
 USING (owner_id = auth.uid() OR public.is_admin())
 WITH CHECK (owner_id = auth.uid() OR public.is_admin());
 
+-- ============================================================
+-- PROFILE ACCESS
+-- ============================================================
+--
+-- A normal authenticated user can access only their own
+-- profile.
+--
+-- Administrators can access all profiles.
+--
+-- The email and phone fields are therefore protected by the
+-- same ownership rule as the rest of the profile.
+-- ============================================================
+
 CREATE POLICY profiles_self
 ON public.profiles
 FOR ALL
 TO authenticated
-USING (id = auth.uid() OR public.is_admin())
-WITH CHECK (id = auth.uid() OR public.is_admin());
-
-CREATE POLICY profiles_org_read
-ON public.profiles
-FOR SELECT
-TO authenticated
 USING (
-  organization_id = public.get_user_org_id()
-  OR id = auth.uid()
+  id = auth.uid()
+  OR public.is_admin()
+)
+WITH CHECK (
+  id = auth.uid()
   OR public.is_admin()
 );
 

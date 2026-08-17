@@ -154,34 +154,28 @@ max_indexes = 5
 
 [auth]
 enabled = true
-# The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
-# in emails.
+
 site_url = "http://127.0.0.1:3000"
-# The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
-# external_url = ""
-# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
-# How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
+
+additional_redirect_urls = [
+  "http://127.0.0.1:3000",
+  "http://localhost:3000"
+]
+
 jwt_expiry = 3600
-# JWT issuer URL. If not set, defaults to auth.external_url.
-# jwt_issuer = ""
-# Path to JWT signing key. DO NOT commit your signing keys file to git.
-# signing_keys_path = "./signing_keys.json"
-# If disabled, the refresh token will never expire.
+
 enable_refresh_token_rotation = true
-# Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
-# Requires enable_refresh_token_rotation = true.
+
 refresh_token_reuse_interval = 10
-# Allow/disallow new user signups to your project.
+
 enable_signup = true
-# Allow/disallow anonymous sign-ins to your project.
+
 enable_anonymous_sign_ins = false
-# Allow/disallow testing manual linking of accounts
+
 enable_manual_linking = false
-# Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
+
 minimum_password_length = 6
-# Passwords that do not meet the following requirements will be rejected as weak. Supported values
-# are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
+
 password_requirements = ""
 
 # Configure passkey sign-ins.
@@ -219,73 +213,44 @@ web3 = 30
 [auth.email]
 # Allow/disallow new user signups via email to your project.
 enable_signup = true
-# If enabled, a user will be required to confirm any email change on both the old, and new email
-# addresses. If disabled, only the new email is required to confirm.
-double_confirm_changes = true
-# If enabled, users need to confirm their email address before signing in.
+
+# We do NOT want email confirmation/OTP.
 enable_confirmations = false
-# If enabled, users will need to reauthenticate or have logged in recently to change their password.
+
+# Keep this disabled because we do not want users to confirm
+# both old and new email addresses when changing their email.
+double_confirm_changes = false
+
+# Users do not need recent authentication before changing
+# their password.
 secure_password_change = false
-# Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
+
+# Minimum time between email OTP/reset emails.
+# This does not affect normal password login.
 max_frequency = "1s"
-# Number of characters used in the email OTP.
+
+# Email OTP settings are kept because Supabase requires the
+# configuration section, but RENFLIX does not use email OTP
+# for signup/signin.
 otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
-
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
-
-# Uncomment to customize notification email template
-# [auth.email.notification.password_changed]
-# enabled = true
-# subject = "Your password has been changed"
-# content_path = "./templates/password_changed_notification.html"
 
 [auth.sms]
-# Allow/disallow new user signups via SMS to your project.
-enable_signup = false
-# If enabled, users need to confirm their phone number before signing in.
+# IMPORTANT:
+# Enable password authentication/signup using phone numbers.
+enable_signup = true
+
+# IMPORTANT:
+# RENFLIX does NOT require phone verification/OTP.
 enable_confirmations = false
-# Template for sending OTP to users
+
+# This template is only relevant to SMS OTP functionality.
+# RENFLIX password signup/signin does not use it.
 template = "Your code is {{ .Code }}"
-# Controls the minimum amount of time that must pass before sending another sms otp.
+
+# Minimum time between SMS OTP requests.
 max_frequency = "5s"
-
-# Use pre-defined map of phone number to OTP for testing.
-# [auth.sms.test_otp]
-# 4152127777 = "123456"
-
-# Configure logged in session timeouts.
-# [auth.sessions]
-# Force log out after the specified duration.
-# timebox = "24h"
-# Force log out if the user has been inactive longer than the specified duration.
-# inactivity_timeout = "8h"
-
-# This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
-# [auth.hook.before_user_created]
-# enabled = true
-# uri = "pg-functions://postgres/auth/before-user-created-hook"
-
-# This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# [auth.hook.custom_access_token]
-# enabled = true
-# uri = "pg-functions://<database>/<schema>/<hook_name>"
-
-# Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
 enabled = false
 account_sid = ""
