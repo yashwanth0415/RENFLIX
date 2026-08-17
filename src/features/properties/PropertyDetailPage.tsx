@@ -1327,7 +1327,7 @@ export default function PropertyDetailPage() {
               />
             }
             title="No tenants assigned"
-            description="Add a tenant to one of this property's units and they will appear here."
+            // description="Add a tenant to one of this property's units and they will appear here."
           />
         ) : (
           <div className="flex flex-col">

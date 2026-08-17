@@ -678,21 +678,21 @@ export default function AppShell() {
   // If any identifier is missing, return to onboarding.
   // ----------------------------------------------------------
 
-  const profileComplete =
-    Boolean(
-      profile?.full_name?.trim() &&
-        profile?.email?.trim() &&
-        profile?.phone?.trim()
-    );
+  // const profileComplete =
+  //   Boolean(
+  //     profile?.full_name?.trim() &&
+  //       profile?.email?.trim() &&
+  //       profile?.phone?.trim()
+  //   );
 
-  if (!profileComplete) {
-    return (
-      <Navigate
-        to="/onboarding"
-        replace
-      />
-    );
-  }
+  // if (!profileComplete) {
+  //   return (
+  //     <Navigate
+  //       to="/onboarding"
+  //       replace
+  //     />
+  //   );
+  // }
 
   // ----------------------------------------------------------
   // Application
