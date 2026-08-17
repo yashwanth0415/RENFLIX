@@ -128,6 +128,7 @@ export interface Tenant {
   phone: string;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
+  emergency_email?: string | null;
   status: TenantStatus;
   unit_id: string | null;
   move_in_date: string | null;

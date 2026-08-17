@@ -10,14 +10,14 @@ import OnboardingPage from "../features/auth/OnboardingPage";
 import AuthCallback from "../features/auth/AuthCallback";
 
 // Authenticated pages
-import DashboardPage from "../features/dashboard/DashboardPage";
+import RoleDashboardPage from "../features/dashboard/RoleDashboardPage";
 import PropertiesPage from "../features/properties/PropertiesPage";
 import PropertyDetailPage from "../features/properties/PropertyDetailPage";
 import UnitsPage from "../features/units/UnitsPage";
 import TenantsPage from "../features/tenants/TenantsPage";
 import TenantDetailPage from "../features/tenants/TenantDetailPage";
 import LeasesPage from "../features/leases/LeasesPage";
-import PaymentsPage from "../features/payments/PaymentsPage";
+import RolePaymentsPage from "../features/payments/RolePaymentsPage";
 import MaintenancePage from "../features/maintenance/MaintenancePage";
 import MessagesPage from "../features/messaging/MessagesPage";
 import AnalyticsPage from "../features/analytics/AnalyticsPage";
@@ -60,14 +60,14 @@ export const router = createBrowserRouter([
   {
     Component: AppShell,   // <-- no angle brackets
     children: [
-      { path: "dashboard", Component: DashboardPage },
+      { path: "dashboard", Component: RoleDashboardPage },
       { path: "properties", Component: PropertiesPage },
       { path: "properties/:propertyDisplayId", Component: PropertyDetailPage },
       { path: "units", Component: UnitsPage },
       { path: "tenants", Component: TenantsPage },
       { path: "tenants/:tenantDisplayId", Component: TenantDetailPage },
       { path: "leases", Component: LeasesPage },
-      { path: "payments", Component: PaymentsPage },
+      { path: "payments", Component: RolePaymentsPage },
       { path: "maintenance", Component: MaintenancePage },
       { path: "messages", Component: MessagesPage },
       { path: "notifications", Component: NotificationsPage },

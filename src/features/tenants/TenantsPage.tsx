@@ -14,6 +14,9 @@ import {
   Search,
   Phone,
   Mail,
+  CheckSquare,
+  Trash2,
+  X,
 } from "lucide-react";
 
 import { supabase } from "../../lib/supabase";
@@ -45,6 +48,7 @@ const defaultForm = {
   phone: "",
   emergency_contact_name: "",
   emergency_contact_phone: "",
+  emergency_email: "",
   property_id: "",
   unit_id: "",
   move_in_date: "",
@@ -102,6 +106,10 @@ export default function TenantsPage() {
     filterProp,
     setFilterProp,
   ] = useState("");
+
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
 
   // ------------------------------------------------------------
   // Modal
@@ -649,6 +657,9 @@ export default function TenantsPage() {
           form.emergency_contact_phone.trim() ||
           null,
 
+        emergency_email:
+          form.emergency_email.trim().toLowerCase() || null,
+
         unit_id:
           form.unit_id ||
           null,
@@ -742,46 +753,26 @@ export default function TenantsPage() {
       // --------------------------------------------------------
 
       else {
-        const {
-          error,
-        } =
-          await supabase
-            .from("tenants")
-            .insert(
-              payload
-            );
-
-        if (error) {
-          throw error;
-        }
-
-        // ------------------------------------------------------
-        // Assigned unit becomes occupied
-        // ------------------------------------------------------
-
-        if (
-          form.unit_id &&
-          form.status ===
-            "ACTIVE"
-        ) {
-          await supabase
-            .from("units")
-            .update({
-              status:
-                "OCCUPIED",
-            })
-            .eq(
-              "id",
-              form.unit_id
-            );
-        }
-
-        setToast({
-          msg:
-            "Tenant added!",
-          type:
-            "success",
+        if (!form.email.trim()) throw new Error("Tenant email is required to create the tenant account.");
+        if (!form.phone.trim()) throw new Error("Tenant phone number is required to create the tenant account.");
+        const { data: provisioned, error: provisionError } = await supabase.functions.invoke("tenant-provision", {
+          body: {
+            full_name: form.full_name.trim(),
+            email: form.email.trim().toLowerCase(),
+            phone: form.phone.trim(),
+            emergency_contact_name: form.emergency_contact_name.trim() || null,
+            emergency_contact_phone: form.emergency_contact_phone.trim() || null,
+            emergency_email: form.emergency_email.trim().toLowerCase() || null,
+            property_id: form.property_id || null,
+            unit_id: form.unit_id || null,
+            move_in_date: form.move_in_date || null,
+            status: form.status,
+          },
         });
+        if (provisionError || !provisioned?.success) throw new Error(provisionError?.message || provisioned?.error || "Unable to create tenant account.");
+        const password = provisioned.temporary_password;
+        window.alert(`Tenant account created successfully.\n\nLogin email: ${form.email.trim().toLowerCase()}\nPhone: ${form.phone.trim()}\nTemporary password: ${password}\n\nShare these credentials securely with the tenant.`);
+        setToast({ msg: "Tenant account created!", type: "success" });
       }
 
       setShowModal(
@@ -819,6 +810,51 @@ export default function TenantsPage() {
   }
 
   // ------------------------------------------------------------
+  // Select / delete tenants
+  // ------------------------------------------------------------
+
+  function toggleTenantSelection(id: string) {
+    setSelectedTenantIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleSelectAll() {
+    const ids = filteredTenants.map((t) => t.id);
+    setSelectedTenantIds((prev) => prev.length === ids.length ? [] : ids);
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedTenantIds([]);
+  }
+
+  async function deleteSelectedTenants() {
+    if (!selectedTenantIds.length) return;
+    const confirmed = window.confirm(
+      `Delete ${selectedTenantIds.length} selected tenant${selectedTenantIds.length > 1 ? "s" : ""}? Their tenant record, profile and login account will be removed. Assigned units will become available. Historical payment records are retained.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setToast(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("tenant-delete", {
+        body: { tenant_ids: selectedTenantIds },
+      });
+      if (error) throw new Error(error.message || "Unable to delete tenants.");
+      if (!data?.success) throw new Error(data?.error || "Unable to delete tenants.");
+      setToast({ msg: `${data.deleted_count || selectedTenantIds.length} tenant(s) removed successfully.`, type: "success" });
+      exitSelectionMode();
+      await fetchAll();
+    } catch (error) {
+      setToast({ msg: error instanceof Error ? error.message : "Unable to delete tenants.", type: "error" });
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  // ------------------------------------------------------------
   // Active tenant count
   // ------------------------------------------------------------
 
@@ -839,15 +875,28 @@ export default function TenantsPage() {
         title="Tenants"
         subtitle={`${activeTenantCount} active tenants`}
         action={
-          <Button
-            onClick={
-              openAdd
-            }
-            size="sm"
-          >
-            <Plus size={16} />
-            Add Tenant
-          </Button>
+          <div className="flex items-center gap-2">
+            {!selectionMode ? (
+              <Button variant="secondary" onClick={() => setSelectionMode(true)} size="sm">
+                <CheckSquare size={16} /> Select
+              </Button>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={toggleSelectAll} size="sm">
+                  {selectedTenantIds.length === filteredTenants.length && filteredTenants.length > 0 ? "Clear" : "Select All"}
+                </Button>
+                <Button variant="secondary" onClick={exitSelectionMode} size="sm">
+                  <X size={16} /> Cancel
+                </Button>
+                <Button onClick={deleteSelectedTenants} size="sm" disabled={!selectedTenantIds.length} loading={deleting}>
+                  <Trash2 size={16} /> Delete{selectedTenantIds.length ? ` (${selectedTenantIds.length})` : ""}
+                </Button>
+              </>
+            )}
+            <Button onClick={openAdd} size="sm" disabled={selectionMode}>
+              <Plus size={16} /> Add Tenant
+            </Button>
+          </div>
         }
       />
 
@@ -1033,19 +1082,26 @@ export default function TenantsPage() {
 
               return (
                 <div
-                  key={
-                    tenant.id
-                  }
-                  className="bg-navy-800 border border-navy-700 rounded-xl p-4 card-hover group cursor-pointer"
-                  onClick={() =>
-                    navigate(
-                      `/tenants/${
-                        tenant.tenant_display_id ||
-                        tenant.id
-                      }`
-                    )
+                  key={tenant.id}
+                  className={`bg-navy-800 border border-navy-700 rounded-xl p-4 card-hover group cursor-pointer ${
+                    selectedTenantIds.includes(tenant.id) ? "border-blue-500 ring-1 ring-blue-500/40" : ""
+                  }`}
+                  onClick={() => selectionMode
+                    ? toggleTenantSelection(tenant.id)
+                    : navigate(`/tenants/${tenant.tenant_display_id || tenant.id}`)
                   }
                 >
+                  {selectionMode && (
+                    <div className="mb-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTenantIds.includes(tenant.id)}
+                        onChange={() => toggleTenantSelection(tenant.id)}
+                        className="h-4 w-4 accent-blue-600"
+                      />
+                      <span className="text-xs text-navy-400">Select tenant</span>
+                    </div>
+                  )}
                   {/* Header */}
 
                   <div className="flex items-start gap-3 mb-3">
@@ -1306,6 +1362,19 @@ export default function TenantsPage() {
               }
             />
           </div>
+
+          <Input
+            label="Emergency email"
+            type="email"
+            placeholder="emergency@email.com"
+            value={form.emergency_email}
+            onChange={(e) =>
+              setForm((current) => ({
+                ...current,
+                emergency_email: e.target.value,
+              }))
+            }
+          />
 
           {/* Property */}
 

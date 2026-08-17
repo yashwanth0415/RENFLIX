@@ -151,11 +151,9 @@ export default function Sidebar({
   const visibleItems =
     NAV_ITEMS.filter(
       (item) =>
-        !item.roles ||
-        !profile?.role ||
-        item.roles.includes(
-          profile.role
-        )
+        (!profile?.role || item.roles?.includes(profile.role) || !item.roles) &&
+      (profile?.role !== "TENANT" ||
+        ["/dashboard", "/payments", "/maintenance", "/messages", "/settings"].includes(item.to))
     );
 
   return (

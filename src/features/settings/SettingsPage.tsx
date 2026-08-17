@@ -242,6 +242,11 @@ export default function SettingsPage() {
       return;
     }
 
+    if (profile?.role === "TENANT") {
+      setToast({ msg: "Tenant account details are managed by the property owner. Use Dashboard to update emergency contact information.", type: "error" });
+      return;
+    }
+
     setSubmitting(true);
     setToast(null);
 
@@ -706,29 +711,9 @@ export default function SettingsPage() {
     label: string;
     icon: React.ReactNode;
   }[] = [
-    {
-      id: "profile",
-      label: "Profile",
-      icon: (
-        <User size={15} />
-      ),
-    },
-    {
-      id: "org",
-      label: "Organization",
-      icon: (
-        <Building2
-          size={15}
-        />
-      ),
-    },
-    {
-      id: "security",
-      label: "Security",
-      icon: (
-        <Shield size={15} />
-      ),
-    },
+    { id: "profile", label: "Profile", icon: <User size={15} /> },
+    ...(profile?.role === "TENANT" ? [] : [{ id: "org" as SettingsTab, label: "Organization", icon: <Building2 size={15} /> }]),
+    { id: "security", label: "Security", icon: <Shield size={15} /> },
   ];
 
   return (
@@ -827,6 +812,7 @@ export default function SettingsPage() {
 
             <Input
               label="Full name"
+              disabled={profile?.role === "TENANT"}
               value={
                 profileForm.full_name
               }
@@ -855,6 +841,7 @@ export default function SettingsPage() {
               <Input
                 label="Email address"
                 type="email"
+                disabled={profile?.role === "TENANT"}
                 value={
                   profileForm.email
                 }
@@ -892,6 +879,7 @@ export default function SettingsPage() {
                 label="Phone number"
                 type="tel"
                 inputMode="tel"
+                disabled={profile?.role === "TENANT"}
                 value={
                   profileForm.phone
                 }
@@ -920,7 +908,7 @@ export default function SettingsPage() {
 
             {/* Role */}
 
-            <div className="pt-2 border-t border-navy-700">
+            {/*<div className="pt-2 border-t border-navy-700">
               <button
                 type="button"
                 onClick={() => {
@@ -941,11 +929,11 @@ export default function SettingsPage() {
               >
                 Change role
               </button>
-            </div>
+            </div>*/}
 
             {/* Save */}
 
-            <Button
+            {profile?.role !== "TENANT" && <Button
               type="submit"
               loading={
                 submitting
@@ -953,7 +941,10 @@ export default function SettingsPage() {
               className="self-start"
             >
               Save changes
-            </Button>
+            </Button>}
+            {profile?.role === "TENANT" && (
+              <p className="text-xs text-navy-500">Your name, email and phone are managed by the property owner. Emergency contact details can be changed from Dashboard.</p>
+            )}
           </form>
         </Card>
       )}
