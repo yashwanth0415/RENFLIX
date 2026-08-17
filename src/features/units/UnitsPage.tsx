@@ -1,129 +1,1237 @@
 import { useEffect, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import { DoorOpen, Plus, Search } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import {
-  Button, Card, StatusBadge, Modal, Input, Select, PageHeader, EmptyState, Skeleton, Toast,
+  Button,
+  Card,
+  StatusBadge,
+  Modal,
+  Input,
+  Select,
+  PageHeader,
+  EmptyState,
+  Skeleton,
+  Toast,
 } from "../../components/ui";
-import type { Unit, UnitStatus, Property } from "../../lib/types";
+import type {
+  Unit,
+  UnitStatus,
+  Property,
+} from "../../lib/types";
 
-const UNIT_STATUSES: { value: UnitStatus; label: string }[] = [
-  { value: "AVAILABLE", label: "Available" },
-  { value: "OCCUPIED", label: "Occupied" },
-  { value: "MAINTENANCE", label: "Under Maintenance" },
-  { value: "RESERVED", label: "Reserved" },
-  { value: "BLOCKED", label: "Blocked" },
+const UNIT_STATUSES: {
+  value: UnitStatus;
+  label: string;
+}[] = [
+  {
+    value: "AVAILABLE",
+    label: "Available",
+  },
+  {
+    value: "OCCUPIED",
+    label: "Occupied",
+  },
+  {
+    value: "MAINTENANCE",
+    label: "Under Maintenance",
+  },
+  {
+    value: "RESERVED",
+    label: "Reserved",
+  },
+  {
+    value: "BLOCKED",
+    label: "Blocked",
+  },
 ];
 
 interface UnitWithProperty extends Unit {
-  property?: { name: string };
+  property?: {
+    name: string;
+  };
 }
 
-const defaultForm = {
+interface UnitForm {
+  property_id: string;
+  number_of_units: string;
+  floor: string;
+  unit_number: string;
+  unit_type: string;
+  monthly_rent: string;
+  security_deposit: string;
+  status: UnitStatus;
+}
+
+const defaultForm: UnitForm = {
   property_id: "",
+  number_of_units: "",
+  floor: "",
   unit_number: "",
-  name: "",
   unit_type: "",
-  area: "",
   monthly_rent: "",
   security_deposit: "",
-  status: "AVAILABLE" as UnitStatus,
+  status: "AVAILABLE",
 };
 
 export default function UnitsPage() {
   const { profile } = useAuth();
-  const [units, setUnits] = useState<UnitWithProperty[]>([]);
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterProp, setFilterProp] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [editUnit, setEditUnit] = useState<Unit | null>(null);
-  const [form, setForm] = useState(defaultForm);
-  const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+
+  const [units, setUnits] = useState<
+    UnitWithProperty[]
+  >([]);
+
+  const [properties, setProperties] =
+    useState<Property[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [search, setSearch] =
+    useState("");
+
+  const [filterProp, setFilterProp] =
+    useState("");
+
+  const [showModal, setShowModal] =
+    useState(false);
+
+  const [editUnit, setEditUnit] =
+    useState<Unit | null>(null);
+
+  const [form, setForm] =
+    useState<UnitForm>(
+      defaultForm
+    );
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  /*
+   * Selection mode.
+   *
+   * false:
+   *   Checkboxes are hidden.
+   *
+   * true:
+   *   Checkboxes are visible.
+   */
+  const [selectionMode, setSelectionMode] =
+    useState(false);
+
+  /*
+   * Stores selected unit IDs.
+   */
+  const [selectedUnits, setSelectedUnits] =
+    useState<Set<string>>(
+      new Set()
+    );
+
+  const [deletingSelected, setDeletingSelected] =
+    useState(false);
+
+  const [toast, setToast] =
+    useState<{
+      msg: string;
+      type: "success" | "error";
+    } | null>(null);
+
+  /*
+   * =====================================================
+   * LOAD DATA
+   * =====================================================
+   */
 
   useEffect(() => {
-    if (profile?.organization_id) fetchAll();
-    else setLoading(false);
+    if (profile?.organization_id) {
+      fetchAll();
+    } else {
+      setLoading(false);
+    }
   }, [profile]);
 
   async function fetchAll() {
-    const { data: props } = await supabase
-      .from("properties")
-      .select("id, name")
-      .eq("organization_id", profile!.organization_id!)
-      .eq("status", "ACTIVE");
-    setProperties((props || []) as Property[]);
+    if (!profile?.organization_id) {
+      setLoading(false);
+      return;
+    }
 
-    if (!props?.length) { setLoading(false); return; }
-    const propIds = props.map((p) => p.id);
-    const { data } = await supabase
-      .from("units")
-      .select("*, property:property_id(name)")
-      .in("property_id", propIds)
-      .order("created_at", { ascending: false });
-    setUnits(data || []);
-    setLoading(false);
+    setLoading(true);
+
+    try {
+      /*
+       * Fetch active properties.
+       */
+      const {
+        data: props,
+        error: propertiesError,
+      } = await supabase
+        .from("properties")
+        .select("id, name")
+        .eq(
+          "organization_id",
+          profile.organization_id
+        )
+        .eq("status", "ACTIVE")
+        .order("name", {
+          ascending: true,
+        });
+
+      if (propertiesError) {
+        throw propertiesError;
+      }
+
+      const activeProperties =
+        (props || []) as Property[];
+
+      setProperties(
+        activeProperties
+      );
+
+      if (
+        activeProperties.length ===
+        0
+      ) {
+        setUnits([]);
+        setSelectedUnits(
+          new Set()
+        );
+        return;
+      }
+
+      const propertyIds =
+        activeProperties.map(
+          (property) =>
+            property.id
+        );
+
+      /*
+       * Fetch units.
+       */
+      const {
+        data,
+        error: unitsError,
+      } = await supabase
+        .from("units")
+        .select(
+          "*, property:property_id(name)"
+        )
+        .in(
+          "property_id",
+          propertyIds
+        )
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (unitsError) {
+        throw unitsError;
+      }
+
+      setUnits(
+        (data || []) as UnitWithProperty[]
+      );
+
+      /*
+       * Remove selected IDs that no longer exist.
+       */
+      setSelectedUnits(
+        (current) => {
+          const existingIds =
+            new Set(
+              (data || []).map(
+                (unit) =>
+                  unit.id
+              )
+            );
+
+          return new Set(
+            Array.from(
+              current
+            ).filter((id) =>
+              existingIds.has(
+                id
+              )
+            )
+          );
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load units:",
+        error
+      );
+
+      setToast({
+        msg:
+          error instanceof Error
+            ? error.message
+            : "Failed to load units.",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
+
+  /*
+   * =====================================================
+   * ADD UNIT
+   * =====================================================
+   */
 
   function openAdd() {
     setEditUnit(null);
-    setForm({ ...defaultForm, property_id: properties[0]?.id || "" });
-    setShowModal(true);
-  }
 
-  function openEdit(u: Unit) {
-    setEditUnit(u);
     setForm({
-      property_id: u.property_id,
-      unit_number: u.unit_number,
-      name: u.name || "",
-      unit_type: u.unit_type || "",
-      area: u.area?.toString() || "",
-      monthly_rent: u.monthly_rent.toString(),
-      security_deposit: u.security_deposit?.toString() || "",
-      status: u.status,
+      ...defaultForm,
+      property_id:
+        properties[0]?.id || "",
     });
+
     setShowModal(true);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    const payload = {
-      property_id: form.property_id,
-      unit_number: form.unit_number,
-      name: form.name || null,
-      unit_type: form.unit_type || null,
-      area: form.area ? parseFloat(form.area) : null,
-      monthly_rent: parseFloat(form.monthly_rent),
-      security_deposit: form.security_deposit ? parseFloat(form.security_deposit) : null,
-      status: form.status,
-      organization_id: profile!.organization_id!,
-    };
+  /*
+   * =====================================================
+   * EDIT UNIT
+   * =====================================================
+   */
+
+  function openEdit(
+    unit: Unit
+  ) {
+    setEditUnit(unit);
+
+    setForm({
+      property_id:
+        unit.property_id,
+
+      number_of_units: "",
+
+      floor: "",
+
+      unit_number:
+        unit.unit_number,
+
+      unit_type:
+        unit.unit_type || "",
+
+      monthly_rent:
+        unit.monthly_rent?.toString() ||
+        "",
+
+      security_deposit:
+        unit.security_deposit?.toString() ||
+        "",
+
+      status:
+        unit.status,
+    });
+
+    setShowModal(true);
+  }
+
+  function closeModal() {
+    if (submitting) {
+      return;
+    }
+
+    setShowModal(false);
+    setEditUnit(null);
+    setForm(defaultForm);
+  }
+
+  /*
+   * =====================================================
+   * NUMERIC INPUT
+   * =====================================================
+   */
+
+  function handleNumericChange(
+    field:
+      | "number_of_units"
+      | "floor"
+      | "monthly_rent"
+      | "security_deposit",
+    value: string
+  ) {
+    const digitsOnly =
+      value.replace(
+        /\D/g,
+        ""
+      );
+
+    setForm(
+      (current) => ({
+        ...current,
+        [field]:
+          digitsOnly,
+      })
+    );
+  }
+
+  function preventNonNumericKeys(
+    event: KeyboardEvent<HTMLInputElement>
+  ) {
+    if (
+      [
+        "e",
+        "E",
+        "+",
+        "-",
+        ".",
+        ",",
+      ].includes(event.key)
+    ) {
+      event.preventDefault();
+    }
+  }
+
+  /*
+   * =====================================================
+   * GENERATE UNIT NUMBERS
+   * =====================================================
+   *
+   * Floor 1 + 5 units:
+   *
+   * 101
+   * 102
+   * 103
+   * 104
+   * 105
+   *
+   * Floor 2 + 5 units:
+   *
+   * 201
+   * 202
+   * 203
+   * 204
+   * 205
+   *
+   * Floor 10 + 5 units:
+   *
+   * 1001
+   * 1002
+   * 1003
+   * 1004
+   * 1005
+   */
+
+  async function generateUnitNumbers(
+    propertyId: string,
+    floor: number,
+    count: number
+  ): Promise<string[]> {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("units")
+      .select(
+        "unit_number"
+      )
+      .eq(
+        "property_id",
+        propertyId
+      );
+
+    if (error) {
+      throw error;
+    }
+
+    const existingNumbers =
+      new Set<string>(
+        (data || [])
+          .map((unit) =>
+            String(
+              unit.unit_number
+            )
+          )
+          .filter(Boolean)
+      );
+
+    const floorPrefix =
+      String(floor);
+
+    const usedSequenceNumbers =
+      new Set<number>();
+
+    existingNumbers.forEach(
+      (unitNumber) => {
+        const expectedLength =
+          floorPrefix.length +
+          2;
+
+        if (
+          unitNumber.length ===
+            expectedLength &&
+          unitNumber.startsWith(
+            floorPrefix
+          )
+        ) {
+          const sequencePart =
+            unitNumber.slice(
+              floorPrefix.length
+            );
+
+          const sequence =
+            Number(
+              sequencePart
+            );
+
+          if (
+            Number.isInteger(
+              sequence
+            ) &&
+            sequence >= 1 &&
+            sequence <= 99
+          ) {
+            usedSequenceNumbers.add(
+              sequence
+            );
+          }
+        }
+      }
+    );
+
+    const generated: string[] =
+      [];
+
+    let sequence = 1;
+
+    while (
+      generated.length <
+      count
+    ) {
+      if (
+        !usedSequenceNumbers.has(
+          sequence
+        )
+      ) {
+        const unitNumber =
+          floorPrefix +
+          String(
+            sequence
+          ).padStart(2, "0");
+
+        generated.push(
+          unitNumber
+        );
+      }
+
+      sequence++;
+    }
+
+    return generated;
+  }
+
+  /*
+   * =====================================================
+   * ADD / UPDATE
+   * =====================================================
+   */
+
+  async function handleSubmit(
+    event: FormEvent
+  ) {
+    event.preventDefault();
+
+    if (
+      !profile?.organization_id
+    ) {
+      setToast({
+        msg:
+          "Your organization could not be identified.",
+        type: "error",
+      });
+
+      return;
+    }
+
+    /*
+     * ===================================================
+     * UPDATE EXISTING UNIT
+     * ===================================================
+     */
 
     if (editUnit) {
-      const { error } = await supabase.from("units").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", editUnit.id);
-      if (error) setToast({ msg: error.message, type: "error" });
-      else { setToast({ msg: "Unit updated!", type: "success" }); setShowModal(false); fetchAll(); }
-    } else {
-      const { error } = await supabase.from("units").insert(payload);
-      if (error) setToast({ msg: error.message, type: "error" });
-      else { setToast({ msg: "Unit added!", type: "success" }); setShowModal(false); fetchAll(); }
+      if (!form.property_id) {
+        setToast({
+          msg:
+            "Please select a property.",
+          type: "error",
+        });
+
+        return;
+      }
+
+      if (
+        !form.unit_type.trim()
+      ) {
+        setToast({
+          msg:
+            "Please enter the unit type.",
+          type: "error",
+        });
+
+        return;
+      }
+
+      const monthlyRent =
+        Number(
+          form.monthly_rent
+        );
+
+      const advance =
+        form.security_deposit
+          ? Number(
+              form.security_deposit
+            )
+          : null;
+
+      if (
+        !Number.isFinite(
+          monthlyRent
+        ) ||
+        monthlyRent < 0
+      ) {
+        setToast({
+          msg:
+            "Please enter a valid monthly rent.",
+          type: "error",
+        });
+
+        return;
+      }
+
+      if (
+        advance !== null &&
+        (!Number.isFinite(
+          advance
+        ) ||
+          advance < 0)
+      ) {
+        setToast({
+          msg:
+            "Please enter a valid advance.",
+          type: "error",
+        });
+
+        return;
+      }
+
+      setSubmitting(true);
+
+      try {
+        const {
+          error,
+        } = await supabase
+          .from("units")
+          .update({
+            property_id:
+              form.property_id,
+
+            unit_type:
+              form.unit_type.trim(),
+
+            monthly_rent:
+              monthlyRent,
+
+            security_deposit:
+              advance,
+
+            status:
+              form.status,
+
+            updated_at:
+              new Date().toISOString(),
+          })
+          .eq(
+            "id",
+            editUnit.id
+          );
+
+        if (error) {
+          throw error;
+        }
+
+        setToast({
+          msg: `Unit ${editUnit.unit_number} updated successfully.`,
+          type: "success",
+        });
+
+        setShowModal(false);
+        setEditUnit(null);
+        setForm(defaultForm);
+
+        await fetchAll();
+      } catch (error) {
+        console.error(
+          "Failed to update unit:",
+          error
+        );
+
+        setToast({
+          msg:
+            error instanceof Error
+              ? error.message
+              : "Failed to update unit.",
+          type: "error",
+        });
+      } finally {
+        setSubmitting(false);
+      }
+
+      return;
     }
-    setSubmitting(false);
+
+    /*
+     * ===================================================
+     * ADD MULTIPLE UNITS
+     * ===================================================
+     */
+
+    if (!form.property_id) {
+      setToast({
+        msg:
+          "Please select a property.",
+        type: "error",
+      });
+
+      return;
+    }
+
+    const numberOfUnits =
+      Number(
+        form.number_of_units
+      );
+
+    const floor =
+      Number(
+        form.floor
+      );
+
+    const monthlyRent =
+      Number(
+        form.monthly_rent
+      );
+
+    const advance =
+      form.security_deposit
+        ? Number(
+            form.security_deposit
+          )
+        : null;
+
+    /*
+     * Number of units:
+     * 1 - 20
+     */
+    if (
+      !Number.isInteger(
+        numberOfUnits
+      ) ||
+      numberOfUnits < 1 ||
+      numberOfUnits > 20
+    ) {
+      setToast({
+        msg:
+          "Number of units must be between 1 and 20.",
+        type: "error",
+      });
+
+      return;
+    }
+
+    /*
+     * Floor:
+     * 1 - 10
+     */
+    if (
+      !Number.isInteger(
+        floor
+      ) ||
+      floor < 1 ||
+      floor > 10
+    ) {
+      setToast({
+        msg:
+          "Floor must be between 1 and 10.",
+        type: "error",
+      });
+
+      return;
+    }
+
+    if (
+      !form.unit_type.trim()
+    ) {
+      setToast({
+        msg:
+          "Please enter the unit type.",
+        type: "error",
+      });
+
+      return;
+    }
+
+    if (
+      !Number.isFinite(
+        monthlyRent
+      ) ||
+      monthlyRent < 0
+    ) {
+      setToast({
+        msg:
+          "Please enter a valid monthly rent.",
+        type: "error",
+      });
+
+      return;
+    }
+
+    if (
+      advance !== null &&
+      (!Number.isFinite(
+        advance
+      ) ||
+        advance < 0)
+    ) {
+      setToast({
+        msg:
+          "Please enter a valid advance.",
+        type: "error",
+      });
+
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const unitNumbers =
+        await generateUnitNumbers(
+          form.property_id,
+          floor,
+          numberOfUnits
+        );
+
+      const payload =
+        unitNumbers.map(
+          (
+            unitNumber
+          ) => ({
+            property_id:
+              form.property_id,
+
+            unit_number:
+              unitNumber,
+
+            name: null,
+
+            unit_type:
+              form.unit_type.trim(),
+
+            area: null,
+
+            monthly_rent:
+              monthlyRent,
+
+            security_deposit:
+              advance,
+
+            status:
+              form.status,
+
+            organization_id:
+              profile.organization_id,
+
+            metadata: {
+              floor,
+            },
+          })
+        );
+
+      const {
+        error,
+      } = await supabase
+        .from("units")
+        .insert(
+          payload
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      setToast({
+        msg: `${numberOfUnits} unit${
+          numberOfUnits >
+          1
+            ? "s"
+            : ""
+        } added successfully.`,
+        type: "success",
+      });
+
+      setShowModal(false);
+      setEditUnit(null);
+      setForm(defaultForm);
+
+      await fetchAll();
+    } catch (error) {
+      console.error(
+        "Failed to add units:",
+        error
+      );
+
+      setToast({
+        msg:
+          error instanceof Error
+            ? error.message
+            : "Failed to add units.",
+        type: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  const filtered = units.filter((u) => {
-    const matchSearch =
-      u.unit_number.toLowerCase().includes(search.toLowerCase()) ||
-      (u.name || "").toLowerCase().includes(search.toLowerCase());
-    const matchProp = !filterProp || u.property_id === filterProp;
-    return matchSearch && matchProp;
-  });
+  /*
+   * =====================================================
+   * SEARCH / FILTER
+   *
+   * IMPORTANT:
+   * filtered is declared BEFORE anything
+   * that uses filtered.
+   * =====================================================
+   */
 
-  const propOptions = [{ value: "", label: "All properties" }, ...properties.map((p) => ({ value: p.id, label: p.name }))];
+  const searchQuery =
+    search
+      .trim()
+      .toLowerCase();
+
+  const filtered =
+    units.filter(
+      (unit) => {
+        const matchSearch =
+          !searchQuery ||
+          unit.unit_number
+            .toLowerCase()
+            .includes(
+              searchQuery
+            ) ||
+          (unit.name || "")
+            .toLowerCase()
+            .includes(
+              searchQuery
+            ) ||
+          (unit.unit_type ||
+            "")
+            .toLowerCase()
+            .includes(
+              searchQuery
+            );
+
+        const matchProperty =
+          !filterProp ||
+          unit.property_id ===
+            filterProp;
+
+        return (
+          matchSearch &&
+          matchProperty
+        );
+      }
+    );
+
+  /*
+   * =====================================================
+   * SELECT ALL
+   * =====================================================
+   */
+
+  const allFilteredSelected =
+    filtered.length > 0 &&
+    filtered.every(
+      (unit) =>
+        selectedUnits.has(
+          unit.id
+        )
+    );
+
+  /*
+   * =====================================================
+   * TOGGLE INDIVIDUAL UNIT
+   * =====================================================
+   */
+
+  function toggleUnitSelection(
+    unitId: string
+  ) {
+    setSelectedUnits(
+      (current) => {
+        const next =
+          new Set(
+            current
+          );
+
+        if (
+          next.has(unitId)
+        ) {
+          next.delete(
+            unitId
+          );
+        } else {
+          next.add(
+            unitId
+          );
+        }
+
+        return next;
+      }
+    );
+  }
+
+  /*
+   * =====================================================
+   * SELECT ALL / UNSELECT ALL
+   * =====================================================
+   */
+
+  function toggleSelectAll() {
+    if (
+      filtered.length ===
+      0
+    ) {
+      return;
+    }
+
+    setSelectedUnits(
+      (current) => {
+        const next =
+          new Set(
+            current
+          );
+
+        if (
+          allFilteredSelected
+        ) {
+          filtered.forEach(
+            (unit) => {
+              next.delete(
+                unit.id
+              );
+            }
+          );
+        } else {
+          filtered.forEach(
+            (unit) => {
+              next.add(
+                unit.id
+              );
+            }
+          );
+        }
+
+        return next;
+      }
+    );
+  }
+
+  /*
+   * =====================================================
+   * SELECTION MODE
+   * =====================================================
+   *
+   * First click:
+   *
+   * SELECT
+   *   ↓
+   * DELETE
+   *
+   * Second click:
+   *
+   * DELETE
+   *   ↓
+   * delete selected units
+   *
+   * If nothing is selected:
+   *
+   * DELETE
+   *   ↓
+   * exit selection mode
+   */
+
+  function handleSelectDeleteButton() {
+    /*
+     * If we aren't currently selecting,
+     * enter selection mode.
+     */
+    if (!selectionMode) {
+      setSelectionMode(true);
+      return;
+    }
+
+    /*
+     * If selection mode is active but
+     * no units have been selected,
+     * simply leave selection mode.
+     */
+    if (
+      selectedUnits.size ===
+      0
+    ) {
+      setSelectionMode(false);
+      return;
+    }
+
+    /*
+     * Otherwise delete the selected units.
+     */
+    handleDeleteSelected();
+  }
+
+  /*
+   * =====================================================
+   * DELETE SELECTED UNITS
+   * =====================================================
+   */
+
+  async function handleDeleteSelected() {
+    const ids =
+      Array.from(
+        selectedUnits
+      );
+
+    if (
+      ids.length ===
+      0
+    ) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Are you sure you want to delete ${ids.length} selected unit${
+          ids.length >
+          1
+            ? "s"
+            : ""
+        }?\n\nThis action cannot be undone.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingSelected(
+      true
+    );
+
+    try {
+      const {
+        error,
+      } = await supabase
+        .from("units")
+        .delete()
+        .in(
+          "id",
+          ids
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      /*
+       * Remove deleted units from UI.
+       */
+      setUnits(
+        (current) =>
+          current.filter(
+            (unit) =>
+              !selectedUnits.has(
+                unit.id
+              )
+          )
+      );
+
+      /*
+       * Clear selections.
+       */
+      setSelectedUnits(
+        new Set()
+      );
+
+      /*
+       * Exit selection mode.
+       */
+      setSelectionMode(
+        false
+      );
+
+      setToast({
+        msg: `${ids.length} unit${
+          ids.length >
+          1
+            ? "s"
+            : ""
+        } deleted successfully.`,
+        type: "success",
+      });
+    } catch (error) {
+      console.error(
+        "Failed to delete selected units:",
+        error
+      );
+
+      setToast({
+        msg:
+          error instanceof Error
+            ? error.message
+            : "Unable to delete selected units. They may be linked to leases, tenants, payments, or maintenance records.",
+        type: "error",
+      });
+    } finally {
+      setDeletingSelected(
+        false
+      );
+    }
+  }
+
+  /*
+   * =====================================================
+   * PROPERTY OPTIONS
+   * =====================================================
+   */
+
+  const propOptions = [
+    {
+      value: "",
+      label:
+        "All properties",
+    },
+
+    ...properties.map(
+      (property) => ({
+        value:
+          property.id,
+
+        label:
+          property.name,
+      })
+    ),
+  ];
+
+  /*
+   * =====================================================
+   * PAGE
+   * =====================================================
+   */
 
   return (
     <div className="animate-fade-in">
@@ -131,113 +1239,660 @@ export default function UnitsPage() {
         title="Units"
         subtitle="Manage all your rental units"
         action={
-          <Button onClick={openAdd} size="sm">
-            <Plus size={16} /> Add Unit
-          </Button>
+          <div className="flex items-center gap-2">
+            {/*
+             * SELECT / DELETE BUTTON
+             *
+             * Initial:
+             * Select
+             *
+             * After clicking:
+             * Delete
+             */}
+            <Button
+              variant={
+                selectionMode
+                  ? "danger"
+                  : "secondary"
+              }
+              size="sm"
+              onClick={
+                handleSelectDeleteButton
+              }
+              loading={
+                deletingSelected
+              }
+            >
+              {selectionMode
+                ? selectedUnits.size >
+                  0
+                  ? `Delete (${selectedUnits.size})`
+                  : "Delete"
+                : "Select"}
+            </Button>
+
+            {/* Add Unit */}
+            <Button
+              onClick={openAdd}
+              size="sm"
+              disabled={
+                properties.length ===
+                0
+              }
+            >
+              <Plus
+                size={16}
+              />
+              Add Unit
+            </Button>
+          </div>
         }
       />
 
+      {/* =================================================
+          SEARCH + PROPERTY FILTER
+          ================================================= */}
+
       <div className="flex gap-3 mb-5">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500" />
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500"
+          />
+
           <input
             className="w-full bg-navy-800 border border-navy-700 rounded-lg pl-9 pr-4 py-2.5 text-sm text-navy-100 placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-blue-electric"
             placeholder="Search units..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={
+              search
+            }
+            onChange={(
+              event
+            ) =>
+              setSearch(
+                event.target
+                  .value
+              )
+            }
           />
         </div>
+
         <select
           className="bg-navy-800 border border-navy-700 rounded-lg px-3 py-2.5 text-sm text-navy-100 focus:outline-none focus:ring-2 focus:ring-blue-electric min-w-[160px]"
-          value={filterProp}
-          onChange={(e) => setFilterProp(e.target.value)}
+          value={
+            filterProp
+          }
+          onChange={(
+            event
+          ) =>
+            setFilterProp(
+              event.target
+                .value
+            )
+          }
         >
-          {propOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {propOptions.map(
+            (option) => (
+              <option
+                key={
+                  option.value
+                }
+                value={
+                  option.value
+                }
+              >
+                {
+                  option.label
+                }
+              </option>
+            )
+          )}
         </select>
       </div>
 
+      {/* =================================================
+          LOADING
+          ================================================= */}
+
       {loading ? (
         <div className="flex flex-col gap-2">
-          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16" />)}
+          {[...Array(8)].map(
+            (_, index) => (
+              <Skeleton
+                key={
+                  index
+                }
+                className="h-16"
+              />
+            )
+          )}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : filtered.length ===
+        0 ? (
         <Card>
           <EmptyState
-            icon={<DoorOpen size={28} />}
+            icon={
+              <DoorOpen
+                size={28}
+              />
+            }
             title="No units found"
-            description={properties.length === 0 ? "Add a property first, then add units." : "Add your first unit."}
-            action={properties.length > 0 ? <Button onClick={openAdd} size="sm"><Plus size={14} /> Add Unit</Button> : undefined}
+            description={
+              properties.length ===
+              0
+                ? "Add a property first, then add units."
+                : search ||
+                    filterProp
+                  ? "No units match your current search or filter."
+                  : "Add your first unit."
+            }
+            action={
+              properties.length >
+                0 &&
+              !search &&
+              !filterProp ? (
+                <Button
+                  onClick={
+                    openAdd
+                  }
+                  size="sm"
+                >
+                  <Plus
+                    size={14}
+                  />
+                  Add Unit
+                </Button>
+              ) : undefined
+            }
           />
         </Card>
       ) : (
+        /*
+         * =================================================
+         * UNIT TABLE
+         * =================================================
+         */
+
         <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-navy-700">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Unit</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden md:table-cell">Property</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden sm:table-cell">Type</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Rent</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((u) => (
-                <tr key={u.id} className="border-b border-navy-700/50 hover:bg-navy-700/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-white">{u.unit_number}</div>
-                    {u.name && <div className="text-xs text-navy-500">{u.name}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-navy-300 hidden md:table-cell">
-                    {(u.property as any)?.name || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-navy-400 font-mono text-xs hidden sm:table-cell">{u.unit_type || "—"}</td>
-                  <td className="px-4 py-3 text-right font-mono text-emerald-400 font-semibold">
-                    ₹{u.monthly_rent.toLocaleString("en-IN")}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <StatusBadge status={u.status} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(u)}>Edit</Button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-navy-700">
+                  {/*
+                   * Checkbox column appears ONLY
+                   * while selection mode is active.
+                   */}
+                  {selectionMode && (
+                    <th className="w-12 px-4 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        checked={
+                          allFilteredSelected
+                        }
+                        onChange={
+                          toggleSelectAll
+                        }
+                        className="h-4 w-4 accent-blue-500 cursor-pointer"
+                        aria-label="Select all visible units"
+                      />
+                    </th>
+                  )}
+
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                    Unit
+                  </th>
+
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden md:table-cell">
+                    Property
+                  </th>
+
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden sm:table-cell">
+                    Type
+                  </th>
+
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                    Rent
+                  </th>
+
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                    Status
+                  </th>
+
+                  <th className="px-4 py-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {filtered.map(
+                  (unit) => {
+                    const isSelected =
+                      selectedUnits.has(
+                        unit.id
+                      );
+
+                    return (
+                      <tr
+                        key={
+                          unit.id
+                        }
+                        className={`border-b border-navy-700/50 transition-colors ${
+                          isSelected
+                            ? "bg-blue-500/10"
+                            : "hover:bg-navy-700/30"
+                        }`}
+                      >
+                        {/*
+                         * Checkbox appears ONLY
+                         * in selection mode.
+                         */}
+                        {selectionMode && (
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={
+                                isSelected
+                              }
+                              onChange={() =>
+                                toggleUnitSelection(
+                                  unit.id
+                                )
+                              }
+                              className="h-4 w-4 accent-blue-500 cursor-pointer"
+                              aria-label={`Select unit ${unit.unit_number}`}
+                            />
+                          </td>
+                        )}
+
+                        {/* Unit */}
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-white">
+                            {
+                              unit.unit_number
+                            }
+                          </div>
+
+                          {unit.name && (
+                            <div className="text-xs text-navy-500">
+                              {
+                                unit.name
+                              }
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Property */}
+                        <td className="px-4 py-3 text-navy-300 hidden md:table-cell">
+                          {
+                            unit
+                              .property
+                              ?.name ||
+                            "—"
+                          }
+                        </td>
+
+                        {/* Type */}
+                        <td className="px-4 py-3 text-navy-400 font-mono text-xs hidden sm:table-cell">
+                          {
+                            unit.unit_type ||
+                            "—"
+                          }
+                        </td>
+
+                        {/* Rent */}
+                        <td className="px-4 py-3 text-right font-mono text-emerald-400 font-semibold">
+                          ₹
+                          {Number(
+                            unit.monthly_rent ||
+                              0
+                          ).toLocaleString(
+                            "en-IN"
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-3 text-center">
+                          <StatusBadge
+                            status={
+                              unit.status
+                            }
+                          />
+                        </td>
+
+                        {/* Edit */}
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              openEdit(
+                                unit
+                              )
+                            }
+                            disabled={
+                              selectionMode ||
+                              deletingSelected
+                            }
+                          >
+                            Edit
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  }
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editUnit ? "Edit Unit" : "Add Unit"}>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* =================================================
+          ADD / EDIT MODAL
+          ================================================= */}
+
+      <Modal
+        open={
+          showModal
+        }
+        onClose={
+          closeModal
+        }
+        title={
+          editUnit
+            ? "Edit Unit"
+            : "Add Units"
+        }
+      >
+        <form
+          onSubmit={
+            handleSubmit
+          }
+          className="flex flex-col gap-4"
+        >
+          {/* Property */}
           <Select
             label="Property"
-            value={form.property_id}
-            onChange={(e) => setForm(f => ({ ...f, property_id: e.target.value }))}
-            options={properties.map((p) => ({ value: p.id, label: p.name }))}
+            value={
+              form.property_id
+            }
+            onChange={(
+              event
+            ) =>
+              setForm(
+                (
+                  current
+                ) => ({
+                  ...current,
+                  property_id:
+                    event
+                      .target
+                      .value,
+                })
+              )
+            }
+            options={properties.map(
+              (
+                property
+              ) => ({
+                value:
+                  property.id,
+                label:
+                  property.name,
+              })
+            )}
+            required
           />
+
+          {/* =================================================
+              ADD MODE
+              ================================================= */}
+
+          {!editUnit ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Number of units */}
+                <Input
+                  label="Number of units"
+                  type="number"
+                  min="1"
+                  max="20"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="1 - 20"
+                  value={
+                    form.number_of_units
+                  }
+                  onKeyDown={
+                    preventNonNumericKeys
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    handleNumericChange(
+                      "number_of_units",
+                      event
+                        .target
+                        .value
+                    )
+                  }
+                  required
+                />
+
+                {/* Floor */}
+                <Input
+                  label="Floor"
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="1 - 10"
+                  value={
+                    form.floor
+                  }
+                  onKeyDown={
+                    preventNonNumericKeys
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    handleNumericChange(
+                      "floor",
+                      event
+                        .target
+                        .value
+                    )
+                  }
+                  required
+                />
+              </div>
+
+              {/*<div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2.5">
+                <p className="text-xs text-blue-300">
+                  Unit numbers are
+                  generated
+                  automatically.
+                </p>
+
+                <p className="text-xs text-navy-500 mt-1">
+                  Example:
+                  Floor 1 with
+                  5 units
+                  creates 101,
+                  102, 103,
+                  104 and
+                  105.
+                </p>
+              </div>*/}
+            </>
+          ) : (
+            /*
+             * EDIT MODE
+             */
+            <Input
+              label="Unit number"
+              value={
+                form.unit_number
+              }
+              readOnly
+              className="opacity-70 cursor-not-allowed"
+            />
+          )}
+
+          {/* Type */}
+          <Input
+            label="Type"
+            placeholder="2BHK"
+            value={
+              form.unit_type
+            }
+            onChange={(
+              event
+            ) =>
+              setForm(
+                (
+                  current
+                ) => ({
+                  ...current,
+                  unit_type:
+                    event
+                      .target
+                      .value,
+                })
+              )
+            }
+            required
+          />
+
+          {/* Rent + Advance */}
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Unit number" placeholder="A-101" value={form.unit_number} onChange={(e) => setForm(f => ({ ...f, unit_number: e.target.value }))} required />
-            <Input label="Unit name" placeholder="Studio" value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} />
+            <Input
+              label="Monthly rent (₹)"
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              placeholder="15000"
+              value={
+                form.monthly_rent
+              }
+              onKeyDown={
+                preventNonNumericKeys
+              }
+              onChange={(
+                event
+              ) =>
+                handleNumericChange(
+                  "monthly_rent",
+                  event
+                    .target
+                    .value
+                )
+              }
+              required
+            />
+
+            <Input
+              label="Advance (₹)"
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              placeholder="50000"
+              value={
+                form.security_deposit
+              }
+              onKeyDown={
+                preventNonNumericKeys
+              }
+              onChange={(
+                event
+              ) =>
+                handleNumericChange(
+                  "security_deposit",
+                  event
+                    .target
+                    .value
+                )
+              }
+            />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Type" placeholder="2BHK" value={form.unit_type} onChange={(e) => setForm(f => ({ ...f, unit_type: e.target.value }))} />
-            <Input label="Area (sq ft)" type="number" value={form.area} onChange={(e) => setForm(f => ({ ...f, area: e.target.value }))} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Monthly rent (₹)" type="number" value={form.monthly_rent} onChange={(e) => setForm(f => ({ ...f, monthly_rent: e.target.value }))} required />
-            <Input label="Deposit (₹)" type="number" value={form.security_deposit} onChange={(e) => setForm(f => ({ ...f, security_deposit: e.target.value }))} />
-          </div>
-          <Select label="Status" value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value as UnitStatus }))} options={UNIT_STATUSES} />
+
+          {/* Status */}
+          <Select
+            label="Status"
+            value={
+              form.status
+            }
+            onChange={(
+              event
+            ) =>
+              setForm(
+                (
+                  current
+                ) => ({
+                  ...current,
+                  status:
+                    event
+                      .target
+                      .value as UnitStatus,
+                })
+              )
+            }
+            options={
+              UNIT_STATUSES
+            }
+            required
+          />
+
+          {/* Buttons */}
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="ghost" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" loading={submitting}>{editUnit ? "Update" : "Add Unit"}</Button>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={
+                closeModal
+              }
+              disabled={
+                submitting
+              }
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="submit"
+              loading={
+                submitting
+              }
+            >
+              {editUnit
+                ? "Update Unit"
+                : "Add Unit"}
+            </Button>
           </div>
         </form>
       </Modal>
 
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {/* =================================================
+          TOAST
+          ================================================= */}
+
+      {toast && (
+        <Toast
+          message={
+            toast.msg
+          }
+          type={
+            toast.type
+          }
+          onClose={() =>
+            setToast(
+              null
+            )
+          }
+        />
+      )}
     </div>
   );
 }
