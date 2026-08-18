@@ -26,7 +26,7 @@ const MAIN_OWNER: NavItem[] = [
 ];
 
 const MORE_ITEMS: NavItem[] = [
-  { to: "/messages", icon: <MessageSquare size={18} />, label: "Messages", beta: true },
+  // { to: "/messages", icon: <MessageSquare size={18} />, label: "Messages", beta: true },
   { to: "/community", icon: <Globe size={18} />, label: "Community", beta: true },
   { to: "/leases", icon: <FileText size={18} />, label: "Leases", beta: true },
   { to: "/analytics", icon: <BarChart3 size={18} />, label: "Analytics", beta: true },
