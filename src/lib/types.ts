@@ -95,6 +95,7 @@ export interface Property {
   created_by: string;
   created_at: string;
   updated_at: string;
+  archived_at?: string | null;
 }
 
 export type UnitStatus = "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "RESERVED" | "BLOCKED";
@@ -115,6 +116,7 @@ export interface Unit {
   property_display_id: string | null;
   created_at: string;
   updated_at: string;
+  archived_at?: string | null;
 }
 
 export type TenantStatus = "ACTIVE" | "INACTIVE" | "FORMER";
@@ -136,6 +138,7 @@ export interface Tenant {
   tenant_display_id: string | null;
   created_at: string;
   updated_at: string;
+  archived_at?: string | null;
 }
 
 export type LeaseStatus = "DRAFT" | "ACTIVE" | "EXPIRED" | "TERMINATED" | "RENEWED";
@@ -214,6 +217,7 @@ export interface MaintenanceRequest {
   completed_date: string | null;
   created_at: string;
   updated_at: string;
+  archived_at?: string | null;
 }
 
 export interface Notification {

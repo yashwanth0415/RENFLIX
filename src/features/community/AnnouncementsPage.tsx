@@ -22,7 +22,7 @@ export default function AnnouncementsPage() {
   async function load() {
     if (!profile?.organization_id) { setLoading(false); return; }
     const { data, error } = await supabase.from("community_announcements")
-      .select("*").eq("organization_id", profile.organization_id)
+      .select("*").eq("organization_id", profile.organization_id).is("archived_at", null)
       .order("created_at", { ascending: false });
     if (error) setToast({msg:error.message,type:"error"});
     setItems((data || []) as Announcement[]);

@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import { Card, PageHeader, Skeleton, StatCard } from "../../components/ui";
+import TenantAnalyticsPage from "../tenant/TenantAnalyticsPage";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -21,9 +22,11 @@ export default function AnalyticsPage() {
   const [maintenance, setMaintenance] = useState<{ status: string; category: string }[]>([]);
 
   useEffect(() => {
-    if (profile?.organization_id) fetchAll();
+    if (profile?.role !== "TENANT" && profile?.organization_id) fetchAll();
     else setLoading(false);
   }, [profile]);
+
+  if (profile?.role === "TENANT") return <TenantAnalyticsPage />;
 
   async function fetchAll() {
     const propRes = await supabase.from("properties").select("id").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE");

@@ -81,6 +81,7 @@ export default function PropertiesPage() {
       .select("*")
       .eq("organization_id", profile!.organization_id!)
       .neq("status", "ARCHIVED")
+      .is("archived_at", null)
       .order("created_at", { ascending: false });
     setProperties(data || []);
     setLoading(false);
@@ -135,7 +136,7 @@ export default function PropertiesPage() {
 
   async function archiveProperty(id: string) {
     if (!confirm("Archive this property?")) return;
-    await supabase.from("properties").update({ status: "ARCHIVED" }).eq("id", id);
+    await supabase.from("properties").update({ status: "ARCHIVED", archived_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
     setToast({ msg: "Property archived", type: "success" });
     fetchProperties();
   }

@@ -7,6 +7,10 @@ import {
   Mail,
   Phone,
   LogOut,
+  Archive,
+  Trash2,
+  X,
+  RefreshCw,
 } from "lucide-react";
 
 import { supabase } from "../../lib/supabase";
@@ -72,6 +76,10 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("renflix-theme") as "dark" | "light") || "dark");
   const [deviceNotifications, setDeviceNotifications] = useState(false);
   const [notificationBusy, setNotificationBusy] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [archivedItems, setArchivedItems] = useState<Array<{ type: string; id: string; name: string; archived_at: string | null }>>([]);
+  const [selectedArchived, setSelectedArchived] = useState<string[]>([]);
   useEffect(() => { document.documentElement.classList.toggle("theme-light", theme === "light"); localStorage.setItem("renflix-theme", theme); }, [theme]);
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +92,63 @@ export default function SettingsPage() {
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  async function loadArchived() {
+    if (!profile?.organization_id) return;
+    setArchivedLoading(true);
+    try {
+      const [props, units, tenants, maintenance, announcements, conversations] = await Promise.all([
+        supabase.from("properties").select("id,name,archived_at").eq("organization_id", profile.organization_id).not("archived_at", "is", null).order("archived_at", { ascending: false }),
+        supabase.from("units").select("id,unit_number,archived_at").eq("organization_id", profile.organization_id).not("archived_at", "is", null).order("archived_at", { ascending: false }),
+        supabase.from("tenants").select("id,full_name,archived_at").eq("organization_id", profile.organization_id).not("archived_at", "is", null).order("archived_at", { ascending: false }),
+        supabase.from("maintenance_requests").select("id,title,archived_at").eq("organization_id", profile.organization_id).not("archived_at", "is", null).order("archived_at", { ascending: false }),
+        supabase.from("community_announcements").select("id,title,archived_at").eq("organization_id", profile.organization_id).not("archived_at", "is", null).order("archived_at", { ascending: false }),
+        supabase.from("conversations").select("id,title,archived_at").eq("organization_id", profile.organization_id).not("archived_at", "is", null).order("archived_at", { ascending: false }),
+      ]);
+      const items = [
+        ...(props.data || []).map((x: any) => ({ type: "properties", id: x.id, name: x.name, archived_at: x.archived_at })),
+        ...(units.data || []).map((x: any) => ({ type: "units", id: x.id, name: `Unit ${x.unit_number}`, archived_at: x.archived_at })),
+        ...(tenants.data || []).map((x: any) => ({ type: "tenants", id: x.id, name: x.full_name, archived_at: x.archived_at })),
+        ...(maintenance.data || []).map((x: any) => ({ type: "maintenance_requests", id: x.id, name: x.title, archived_at: x.archived_at })),
+        ...(announcements.data || []).map((x: any) => ({ type: "community_announcements", id: x.id, name: x.title, archived_at: x.archived_at })),
+        ...(conversations.data || []).map((x: any) => ({ type: "conversations", id: x.id, name: x.title || "Conversation", archived_at: x.archived_at })),
+      ];
+      setArchivedItems(items);
+    } finally {
+      setArchivedLoading(false);
+    }
+  }
+
+  async function openArchived() {
+    setShowArchived(true);
+    await loadArchived();
+  }
+
+  function toggleArchivedSelection(key: string) {
+    setSelectedArchived((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]);
+  }
+
+  async function deleteSelectedArchived() {
+    if (!selectedArchived.length) return;
+    if (!window.confirm(`Permanently delete ${selectedArchived.length} archived item(s)? This cannot be undone.`)) return;
+    const grouped: Record<string, string[]> = {};
+    for (const key of selectedArchived) {
+      const split = key.indexOf(":");
+      const type = key.slice(0, split);
+      const id = key.slice(split + 1);
+      (grouped[type] ||= []).push(id);
+    }
+    for (const [table, ids] of Object.entries(grouped)) {
+      const { error } = await supabase.from(table).delete().in("id", ids);
+      if (error) {
+        setToast({ msg: `Unable to delete archived ${table}: ${error.message}`, type: "error" });
+        return;
+      }
+    }
+    setSelectedArchived([]);
+    await loadArchived();
+    setToast({ msg: "Archived items permanently deleted.", type: "success" });
+  }
 
   async function toggleDeviceNotifications() {
     if (!user?.id || notificationBusy) return;
@@ -1212,6 +1277,18 @@ export default function SettingsPage() {
               <div className="flex gap-2"><Button size="sm" variant={theme === "light" ? "primary" : "secondary"} onClick={() => setTheme("light")}>Light</Button><Button size="sm" variant={theme === "dark" ? "primary" : "secondary"} onClick={() => setTheme("dark")}>Dark</Button></div>
             </div>
           </Card>
+          <Card className="overflow-hidden border-amber-500/20 bg-gradient-to-br from-amber-500/5 via-navy-800 to-navy-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-400/15 text-amber-300 flex items-center justify-center flex-shrink-0"><Archive size={19} /></div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2"><h3 className="font-display font-bold text-white">Archive</h3><span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-400/15">10 days</span></div>
+                  {/*<p className="text-xs text-navy-400 mt-1 leading-relaxed">Manage archived properties, units, tenants, maintenance, announcements and messages before automatic deletion.</p>*/}
+                </div>
+              </div>
+              <Button size="sm" variant="secondary" onClick={openArchived} className="shrink-0"><Archive size={14} /> Open archive</Button>
+            </div>
+          </Card>
           <Card className="border-red-500/20">
             <div className="flex items-center justify-between gap-4 py-1">
               {/*<div><h3 className="font-display font-bold text-white">Sign out</h3><p className="text-xs text-navy-500 mt-1">Sign out of this RENFLIX account on this device.</p></div>*/}
@@ -1228,6 +1305,38 @@ export default function SettingsPage() {
         </div>
       )}
 
+
+      {showArchived && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl border border-navy-700 bg-navy-900 shadow-2xl">
+            <div className="flex items-center justify-between gap-3 p-4 border-b border-navy-800">
+              <div><h3 className="font-display font-bold text-white">Archived</h3><p className="text-xs text-navy-500 mt-1">Archived records are automatically deleted after 10 days.</p></div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={loadArchived} disabled={archivedLoading}><RefreshCw size={14} /></Button>
+                <button type="button" className="p-2 rounded-lg text-navy-400 hover:text-white hover:bg-navy-800" onClick={() => { setShowArchived(false); setSelectedArchived([]); }}><X size={17} /></button>
+              </div>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {archivedLoading ? <div className="py-12 text-center text-sm text-navy-500">Loading archive…</div> : archivedItems.length === 0 ? <div className="py-12 text-center text-sm text-navy-500">Nothing is archived.</div> : (
+                <div className="space-y-2">
+                  {archivedItems.map((item) => {
+                    const key = `${item.type}:${item.id}`;
+                    const label = item.type === "properties" ? "Property" : item.type === "units" ? "Unit" : item.type === "tenants" ? "Tenant" : item.type === "maintenance_requests" ? "Maintenance" : item.type === "community_announcements" ? "Announcement" : "Message";
+                    return <label key={key} className="flex items-center gap-3 rounded-xl border border-navy-800 bg-navy-950/40 px-3 py-3 cursor-pointer hover:bg-navy-800/50">
+                      <input type="checkbox" checked={selectedArchived.includes(key)} onChange={() => toggleArchivedSelection(key)} className="accent-blue-500" />
+                      <div className="min-w-0 flex-1"><div className="text-sm font-semibold text-white truncate">{item.name}</div><div className="text-[11px] text-navy-500">{label} · Archived {item.archived_at ? new Date(item.archived_at).toLocaleDateString("en-IN") : ""}</div></div>
+                    </label>;
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3 p-4 border-t border-navy-800">
+              <span className="text-xs text-navy-500">{selectedArchived.length ? `${selectedArchived.length} selected` : "Select records to permanently delete"}</span>
+              <Button variant="danger" size="sm" onClick={deleteSelectedArchived} disabled={!selectedArchived.length}><Trash2 size={14} /> Delete selected</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ====================================================== */}
       {/* TOAST                                                   */}

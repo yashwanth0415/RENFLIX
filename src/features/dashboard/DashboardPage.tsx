@@ -793,8 +793,7 @@ export default function DashboardPage() {
                     <div className="text-sm font-semibold text-navy-200 truncate">{req.title}</div>
                     <div className="text-xs text-navy-500">{req.category}</div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <StatusBadge status={req.priority} />
+                  <div className="flex items-center justify-end shrink-0">
                     <StatusBadge status={req.status} />
                   </div>
                 </div>

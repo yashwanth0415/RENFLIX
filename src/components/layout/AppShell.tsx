@@ -792,7 +792,7 @@ export default function AppShell() {
       {/* ==================================================== */}
 
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 flex">
+        <div className="lg:hidden fixed inset-0 z-[100] flex">
           <div
             className="absolute inset-0 bg-navy-950/85 backdrop-blur-sm modal-backdrop"
             onClick={() =>
@@ -802,7 +802,7 @@ export default function AppShell() {
             }
           />
 
-          <div className="relative z-50 flex w-72 animate-slide-in-left">
+          <div className="relative z-50 flex w-72 h-[100dvh] animate-slide-in-left">
             <Sidebar
               profile={profile}
               mobile
@@ -825,7 +825,7 @@ export default function AppShell() {
         {/* MOBILE TOPBAR                                     */}
         {/* -------------------------------------------------- */}
 
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-navy-900 border-b border-navy-800 flex-shrink-0">
+        <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-navy-900/95 border-b border-navy-800 flex-shrink-0 backdrop-blur-xl">
           <button
             onClick={() =>
               setMobileOpen(
@@ -993,7 +993,7 @@ export default function AppShell() {
         {/* CONTENT                                            */}
         {/* -------------------------------------------------- */}
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto pt-[58px] lg:pt-0 overscroll-contain">
           <div className="p-4 md:p-6 lg:p-8">
             <Outlet />
           </div>

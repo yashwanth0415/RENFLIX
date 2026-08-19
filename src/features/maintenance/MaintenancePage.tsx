@@ -92,6 +92,7 @@ export default function MaintenancePage() {
           .from("maintenance_requests")
           .select("*")
           .eq("tenant_id", t.id)
+          .is("archived_at", null)
           .order("created_at", { ascending: false });
         if (requestError) throw requestError;
         setRequests((tenantRequests || []) as MaintenanceRequest[]);
@@ -100,6 +101,7 @@ export default function MaintenancePage() {
           supabase.from("maintenance_requests")
             .select("*")
             .eq("organization_id", profile!.organization_id!)
+            .is("archived_at", null)
             .order("created_at", { ascending: false }),
           supabase.from("properties")
             .select("*")
@@ -158,13 +160,13 @@ export default function MaintenancePage() {
       setToast({ msg: "Select at least one maintenance request.", type: "error" });
       return;
     }
-    if (!confirm(`Delete ${selectedIds.length} selected maintenance request(s)?`)) return;
-    const { error } = await supabase.from("maintenance_requests").delete().in("id", selectedIds);
+    if (!confirm(`Archive ${selectedIds.length} selected maintenance request(s)? They will remain in Settings → Archived.`)) return;
+    const { error } = await supabase.from("maintenance_requests").update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() }).in("id", selectedIds);
     if (error) {
       setToast({ msg: error.message, type: "error" });
       return;
     }
-    setToast({ msg: "Selected maintenance requests deleted.", type: "success" });
+    setToast({ msg: "Selected maintenance requests archived.", type: "success" });
     setSelectedIds([]);
     setSelectionMode(false);
     fetchAll();
@@ -211,13 +213,13 @@ export default function MaintenancePage() {
           subtitle="Report a maintenance issue to your property owner."
           action={
             <div className="flex items-center gap-2">
-              {/*{selectionMode ? (
+              {selectionMode ? (
                 <Button variant="secondary" size="sm" onClick={deleteSelectedMaintenance} disabled={!selectedIds.length} className="text-red-400">
-                  Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}
+                  Archive{selectedIds.length ? ` (${selectedIds.length})` : ""}
                 </Button>
               ) : (
                 <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
-              )}*/}
+              )}
               <Button onClick={() => setShowModal(true)} size="sm">
                 <Plus size={16} />New
               </Button>
@@ -313,7 +315,7 @@ export default function MaintenancePage() {
         action={
           selectionMode ? (
             <Button variant="danger" size="sm" onClick={() => selectedIds.length ? deleteSelectedMaintenance() : setSelectionMode(false)} >
-              Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}
+              Archive{selectedIds.length ? ` (${selectedIds.length})` : ""}
             </Button>
           ) : (
             <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>

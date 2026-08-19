@@ -25,6 +25,8 @@ import AnalyticsPage from "../features/analytics/AnalyticsPage";
 import CommunityPage from "../features/community/CommunityPage";
 import AnnouncementsPage from "../features/community/AnnouncementsPage";
 import IntelligencePage from "../features/intelligence/IntelligencePage";
+import TenantAnalyticsPage from "../features/tenant/TenantAnalyticsPage";
+import TenantIntelligencePage from "../features/tenant/TenantIntelligencePage";
 import SettingsPage from "../features/settings/SettingsPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
 import AdminPage from "../features/admin/AdminPage";

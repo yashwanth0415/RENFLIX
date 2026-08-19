@@ -3,6 +3,7 @@ import { Cpu, TrendingUp, AlertTriangle, CheckCircle, Info } from "lucide-react"
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import { Card, PageHeader, Skeleton } from "../../components/ui";
+import TenantIntelligencePage from "../tenant/TenantIntelligencePage";
 
 interface Insight {
   type: "positive" | "warning" | "info";
@@ -80,9 +81,11 @@ export default function IntelligencePage() {
   const [rawData, setRawData] = useState<any>({});
 
   useEffect(() => {
-    if (profile?.organization_id) fetchData();
+    if (profile?.role !== "TENANT" && profile?.organization_id) fetchData();
     else setLoading(false);
   }, [profile]);
+
+  if (profile?.role === "TENANT") return <TenantIntelligencePage />;
 
   async function fetchData() {
     const propRes = await supabase.from("properties").select("id, name").eq("organization_id", profile!.organization_id!).eq("status", "ACTIVE");

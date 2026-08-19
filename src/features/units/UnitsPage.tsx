@@ -224,6 +224,7 @@ export default function UnitsPage() {
           "property_id",
           propertyIds
         )
+        .is("archived_at", null)
         .order("created_at", {
           ascending: false,
         });
@@ -1129,12 +1130,12 @@ export default function UnitsPage() {
 
     const confirmed =
       window.confirm(
-        `Are you sure you want to delete ${ids.length} selected unit${
+        `Archive ${ids.length} selected unit${
           ids.length >
           1
             ? "s"
             : ""
-        }?\n\nThis action cannot be undone.`
+        }?\n\nThey will remain available in Settings → Archived.`
       );
 
     if (!confirmed) {
@@ -1150,7 +1151,7 @@ export default function UnitsPage() {
         error,
       } = await supabase
         .from("units")
-        .delete()
+        .update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .in(
           "id",
           ids
@@ -1193,12 +1194,12 @@ export default function UnitsPage() {
           1
             ? "s"
             : ""
-        } deleted successfully.`,
+        } archived successfully.`,
         type: "success",
       });
     } catch (error) {
       console.error(
-        "Failed to delete selected units:",
+        "Failed to archive selected units:",
         error
       );
 
@@ -1206,7 +1207,7 @@ export default function UnitsPage() {
         msg:
           error instanceof Error
             ? error.message
-            : "Unable to delete selected units. They may be linked to leases, tenants, payments, or maintenance records.",
+            : "Unable to archive selected units.",
         type: "error",
       });
     } finally {
@@ -1279,8 +1280,8 @@ export default function UnitsPage() {
               {selectionMode
                 ? selectedUnits.size >
                   0
-                  ? `Delete (${selectedUnits.size})`
-                  : "Delete"
+                  ? `Archive (${selectedUnits.size})`
+                  : "Archive"
                 : "Select"}
             </Button>
 
@@ -1451,26 +1452,26 @@ export default function UnitsPage() {
                     </th>
                   )}
 
-                  <th className="w-[22%] text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                  <th className="w-[30%] md:w-[15%] text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Unit
                   </th>
 
-                  <th className="hidden md:table-cell text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                  <th className="hidden md:table-cell md:w-[14%] text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="hidden md:table-cell text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                  <th className="hidden md:table-cell md:w-[31%] text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Property
                   </th>
 
-                  <th className="w-[22%] text-right px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                  <th className="w-[25%] md:w-[15%] text-right px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Rent
                   </th>
 
-                  <th className="w-[22%] text-center px-1 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                  <th className="w-[25%] md:w-[15%] text-center px-1 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Status
                   </th>
 
-                  <th className="w-[22%] px-1 sm:px-3 py-3" />
+                  <th className="w-[20%] md:w-[10%] px-1 sm:px-3 py-3" />
                 </tr>
               </thead>
 
@@ -1539,12 +1540,12 @@ export default function UnitsPage() {
                         </td>
 
                         {/* Property: desktop only */}
-                        <td className="hidden md:table-cell px-2 sm:px-4 py-3 text-navy-300 truncate">
+                        <td className="hidden md:table-cell px-2 sm:px-4 py-3 text-navy-300 whitespace-normal break-words leading-tight align-middle">
                           {unit.property?.name || "—"}
                         </td>
 
                         {/* Rent */}
-                        <td className="px-2 sm:px-4 py-3 text-right font-mono text-emerald-400 font-semibold">
+                        <td className="px-2 sm:px-3 py-3 text-right font-mono text-emerald-400 font-semibold whitespace-nowrap">
                           ₹
                           {Number(
                             unit.monthly_rent ||
@@ -1555,7 +1556,7 @@ export default function UnitsPage() {
                         </td>
 
                         {/* Status */}
-                        <td className="px-2 sm:px-4 py-3 text-center">
+                        <td className="px-2 sm:px-2 py-3 text-center">
                           <StatusBadge
                             status={
                               unit.status
@@ -1564,7 +1565,7 @@ export default function UnitsPage() {
                         </td>
 
                         {/* Edit */}
-                        <td className="px-1 sm:px-3 py-3 text-center">
+                        <td className="w-[20%] md:w-[10%] px-1 sm:px-3 py-3 text-center">
                           <Button className="px-2 sm:px-3"
                             size="sm"
                             variant="ghost"

@@ -27,8 +27,8 @@ export default function CommunityPage() {
   async function fetchTargets() {
     if (!profile?.organization_id) return;
     const [{ data: props }, { data: us }] = await Promise.all([
-      supabase.from("properties").select("id,name").eq("organization_id", profile.organization_id).eq("status","ACTIVE").order("name"),
-      supabase.from("units").select("id,unit_number,property_id").eq("organization_id", profile.organization_id).order("property_id").order("unit_number")
+      supabase.from("properties").select("id,name").eq("organization_id", profile.organization_id).eq("status","ACTIVE").is("archived_at", null).order("name"),
+      supabase.from("units").select("id,unit_number,property_id").eq("organization_id", profile.organization_id).is("archived_at", null).order("property_id").order("unit_number")
     ]);
     setProperties((props || []) as {id:string;name:string}[]);
     setUnits((us || []) as {id:string;unit_number:string;property_id:string}[]);
@@ -45,7 +45,7 @@ export default function CommunityPage() {
 
   async function fetchAnnouncements() {
     const { data, error } = await supabase.from("community_announcements").select("*")
-      .eq("organization_id", profile!.organization_id!).order("created_at", { ascending: false });
+      .eq("organization_id", profile!.organization_id!).is("archived_at", null).order("created_at", { ascending: false });
     if (error) setToast({ msg: error.message, type: "error" });
     setAnnouncements((data || []) as Announcement[]);
     setLoading(false);
@@ -78,15 +78,15 @@ export default function CommunityPage() {
       setToast({ msg: "Select at least one announcement.", type: "error" });
       return;
     }
-    if (!confirm(`Delete ${selectedIds.length} selected announcement(s)? This will remove them from the database.`)) return;
-    const { error } = await supabase.rpc("delete_community_announcements", { p_ids: selectedIds });
+    if (!confirm(`Archive ${selectedIds.length} selected announcement(s)? They will remain in Settings → Archived.`)) return;
+    const { error } = await supabase.from("community_announcements").update({ archived_at: new Date().toISOString() }).in("id", selectedIds);
     if (error) {
       setToast({ msg: error.message, type: "error" });
       return;
     }
     setAnnouncements(prev => prev.filter(a => !selectedIds.includes(a.id)));
     setSelectedIds([]); setSelectionMode(false);
-    setToast({ msg: "Selected announcements deleted.", type: "success" });
+    setToast({ msg: "Selected announcements archived.", type: "success" });
   }
 
   const priorityColor: Record<string, string> = {
@@ -96,11 +96,11 @@ export default function CommunityPage() {
   return <div className="animate-fade-in">
     <PageHeader title="Community" subtitle="Announcements and community management" action={
       <div className="flex items-center gap-2">
-        {/*{selectionMode ? (
-          <Button variant="danger" size="sm" onClick={deleteSelected} disabled={!selectedIds.length}><Trash2 size={15}/> Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}</Button>
+        {selectionMode ? (
+          <Button variant="danger" size="sm" onClick={deleteSelected} disabled={!selectedIds.length}><Trash2 size={15}/> Archive{selectedIds.length ? ` (${selectedIds.length})` : ""}</Button>
         ) : (
           <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
-        )}*/}
+        )}
         <Button size="sm" onClick={() => setShowModal(true)}><Plus size={16}/> Announce</Button>
       </div>
     } />

@@ -1,6 +1,7 @@
 import {
   RouterProvider,
 } from "react-router";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 
 import {
   router,
@@ -8,8 +9,8 @@ import {
 
 export default function App() {
   return (
-    <RouterProvider
-      router={router}
-    />
+    <AppErrorBoundary>
+      <RouterProvider router={router} />
+    </AppErrorBoundary>
   );
 }

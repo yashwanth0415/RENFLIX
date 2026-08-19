@@ -393,8 +393,7 @@ export default function TenantDashboardPage() {
                       {req.category} · {new Date(req.created_at).toLocaleDateString("en-IN")}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <StatusBadge status={req.priority} />
+                  <div className="flex items-center justify-end shrink-0">
                     <StatusBadge status={req.status} />
                   </div>
                 </div>

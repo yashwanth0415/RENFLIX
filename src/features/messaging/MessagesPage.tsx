@@ -33,6 +33,7 @@ export default function MessagesPage() {
   const [starting, setStarting] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedConversationIds, setSelectedConversationIds] = useState<string[]>([]);
+  const [conversationNames, setConversationNames] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -66,11 +67,38 @@ export default function MessagesPage() {
       .from("conversations")
       .select("*")
       .eq("organization_id", profile!.organization_id!)
+      .is("archived_at", null)
       .order("updated_at", { ascending: false });
     if (error) {
       setToast({ msg: error.message, type: "error" });
     } else {
-      setConversations((data || []) as Conversation[]);
+      const rows = (data || []) as Conversation[];
+      setConversations(rows);
+      try {
+        const ids = rows.map((c) => c.id);
+        if (ids.length) {
+          const { data: members } = await supabase.from("conversation_members").select("conversation_id,user_id").in("conversation_id", ids);
+          const userIds = Array.from(new Set((members || []).map((m: any) => m.user_id)));
+          const { data: people } = userIds.length ? await supabase.from("profiles").select("id,full_name,role").in("id", userIds) : { data: [] as any[] };
+          const nameById = Object.fromEntries((people || []).map((p: any) => [p.id, p.full_name || "User"]));
+          const map: Record<string,string> = {};
+          (members || []).forEach((m: any) => {
+            if (m.user_id !== user?.id && nameById[m.user_id]) map[m.conversation_id] = nameById[m.user_id];
+          });
+          if (isTenant) {
+            const { data: owner } = await supabase
+              .from("profiles")
+              .select("id, full_name")
+              .eq("organization_id", profile!.organization_id!)
+              .eq("role", "OWNER")
+              .order("created_at", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            if (owner?.full_name) rows.forEach((row) => { map[row.id] = owner.full_name; });
+          }
+          setConversationNames(map);
+        }
+      } catch {}
     }
     setLoading(false);
   }
@@ -173,8 +201,8 @@ export default function MessagesPage() {
       setToast({ msg: "Select at least one conversation.", type: "error" });
       return;
     }
-    if (!confirm(`Delete ${selectedConversationIds.length} selected conversation(s) and their messages?`)) return;
-    const { error } = await supabase.from("conversations").delete().in("id", selectedConversationIds);
+    if (!confirm(`Archive ${selectedConversationIds.length} selected conversation(s)? They will remain in Settings → Archived.`)) return;
+    const { error } = await supabase.from("conversations").update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() }).in("id", selectedConversationIds);
     if (error) {
       setToast({ msg: error.message, type: "error" });
       return;
@@ -185,7 +213,7 @@ export default function MessagesPage() {
     }
     setSelectedConversationIds([]);
     setSelectionMode(false);
-    setToast({ msg: "Selected conversations deleted.", type: "success" });
+    setToast({ msg: "Selected conversations archived.", type: "success" });
     loadConversations();
   }
 
@@ -240,7 +268,7 @@ export default function MessagesPage() {
             <Button className="h-[42px]" size="sm" onClick={startTenantConversation} loading={starting} disabled={!selectedTenantId}>Start</Button>
             {selectionMode ? (
               <Button className="h-[42px]" variant="secondary" size="sm" onClick={deleteSelectedConversations} disabled={!selectedConversationIds.length}>
-                Delete{selectedConversationIds.length ? ` (${selectedConversationIds.length})` : ""}
+                Archive{selectedConversationIds.length ? ` (${selectedConversationIds.length})` : ""}
               </Button>
             ) : (
               <Button className="h-[42px]" variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
@@ -250,7 +278,7 @@ export default function MessagesPage() {
         {isTenant && (
           selectionMode ? (
             <Button className="h-[42px]" variant="secondary" size="sm" onClick={deleteSelectedConversations} disabled={!selectedConversationIds.length}>
-              Delete{selectedConversationIds.length ? ` (${selectedConversationIds.length})` : ""}
+              Archive{selectedConversationIds.length ? ` (${selectedConversationIds.length})` : ""}
             </Button>
           ) : (
             <Button className="h-[42px]" variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
@@ -280,7 +308,7 @@ export default function MessagesPage() {
                   )}
                   <button key={conv.id} onClick={() => setActiveConv(conv)}
                     className="flex-1 text-left px-4 py-3 hover:bg-navy-700/40 transition-colors">
-                    <div className="font-semibold text-sm text-white truncate">{conv.title || "Conversation"}</div>
+                    <div className="font-semibold text-sm text-white truncate">{conversationNames[conv.id] || conv.title || "Conversation"}</div>
                     <div className="text-xs text-navy-500">{new Date(conv.updated_at).toLocaleDateString("en-IN")}</div>
                   </button>
                 </div>
@@ -300,7 +328,7 @@ export default function MessagesPage() {
                 <button className="md:hidden text-navy-400 hover:text-white p-1 -ml-1" onClick={() => setActiveConv(null)}>
                   <ArrowLeft size={20} />
                 </button>
-                <div className="font-display font-semibold text-white truncate">{activeConv.title || (isTenant ? "Property Owner" : "Conversation")}</div>
+                <div className="font-display font-semibold text-white truncate">{conversationNames[activeConv.id] || activeConv.title || (isTenant ? "Property Owner" : "Conversation")}</div>
               </div>
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                 {messages.length === 0 && <div className="flex items-center justify-center h-full text-navy-500 text-sm">No messages yet. Send the first one!</div>}

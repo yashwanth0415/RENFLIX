@@ -217,7 +217,7 @@ export default function PaymentsPage() {
                     <td className="hidden md:table-cell px-2 sm:px-4 py-3 font-mono text-blue-300 font-semibold truncate">#{pay.payment_display_id || "—"}</td>
                     <td className="px-2 sm:px-3 py-3 min-w-0">
                       <button type="button" onClick={() => setReceiptPayment(pay)} className="block text-left max-w-full">
-                        <div className="font-semibold text-white text-[12px] sm:text-sm truncate">{tenant?.full_name || "Unknown"}</div>
+                        <div className="font-semibold text-white text-[13px] sm:text-sm truncate">{tenant?.full_name || "Unknown"}</div>
                         {pay.reference_number && <div className="text-[9px] sm:text-xs text-navy-500 font-mono truncate">{pay.reference_number}</div>}
                       </button>
                     </td>

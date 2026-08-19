@@ -41,6 +41,11 @@ const TENANT_ITEMS: NavItem[] = [
   { to: "/announcements", icon: <Megaphone size={18} />, label: "Announcements" },
 ];
 
+const TENANT_MORE_ITEMS: NavItem[] = [
+  { to: "/analytics", icon: <BarChart3 size={18} />, label: "Analytics", beta: true },
+  { to: "/intelligence", icon: <Cpu size={18} />, label: "Intelligence", beta: true },
+];
+
 function LinkItem({ item, onClose }: { item: NavItem; onClose?: () => void }) {
   return (
     <NavLink
@@ -90,17 +95,35 @@ export default function Sidebar({ profile, mobile, onClose }: SidebarProps) {
         ];
 
   return (
-    <aside className={`flex flex-col bg-navy-900 border-r border-navy-800 ${mobile ? "w-full" : "w-60"} h-full`}>
-      <div className="px-5 py-5 border-b border-navy-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
-            <Home size={16} className="text-white" />
-          </div>
-          <div>
+    <aside className={`flex flex-col bg-navy-900 border-r border-navy-800 ${mobile ? "w-full h-[100dvh]" : "w-60 h-full"} overflow-hidden`}>
+      <div className={`flex items-center justify-between px-5 py-5 border-b border-navy-800 flex-shrink-0 bg-navy-900 ${mobile ? "sticky top-0 z-20" : ""}`}>
+        <div className="flex items-center gap-2.5 min-w-0">
+          {mobile ? (
+            <img
+              src="/logo.png"
+              alt="RENFLIX"
+              className="w-9 h-9 rounded-lg object-contain flex-shrink-0 shadow-lg"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
+              <Home size={16} className="text-white" />
+            </div>
+          )}
+          <div className="min-w-0">
             <div className="font-display text-lg font-extrabold gradient-text leading-none">RENFLIX</div>
             <div className="text-[9px] text-navy-500 font-mono uppercase tracking-widest">Property OS</div>
           </div>
         </div>
+        {mobile && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close sidebar"
+            className="ml-3 p-1.5 rounded-lg text-navy-400 hover:text-white hover:bg-navy-800 transition-colors flex-shrink-0"
+          >
+            <ChevronRight size={18} className="rotate-180" />
+          </button>
+        )}
       </div>
 
       {profile && (
@@ -125,7 +148,7 @@ export default function Sidebar({ profile, mobile, onClose }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-0.5">
         {mainItems.map(item => <LinkItem key={item.to} item={item} onClose={onClose} />)}
 
-        {isOwnerPortal && (
+        {(isOwnerPortal || role === "TENANT") && (
           <div className="mt-0.5">
             <button
               type="button"
@@ -140,7 +163,7 @@ export default function Sidebar({ profile, mobile, onClose }: SidebarProps) {
 
             {moreOpen && (
               <div className="mt-1 ml-2 pl-2 border-l border-navy-700 flex flex-col gap-0.5 animate-fade-in">
-                {MORE_ITEMS.map(item => <LinkItem key={item.to} item={item} onClose={onClose} />)}
+                {(role === "TENANT" ? TENANT_MORE_ITEMS : MORE_ITEMS).map(item => <LinkItem key={item.to} item={item} onClose={onClose} />)}
               </div>
             )}
           </div>

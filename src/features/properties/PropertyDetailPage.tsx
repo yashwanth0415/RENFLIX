@@ -865,6 +865,8 @@ export default function PropertyDetailPage() {
           .update({
             status:
               "ARCHIVED",
+            archived_at:
+              new Date().toISOString(),
             updated_at:
               new Date().toISOString(),
           })

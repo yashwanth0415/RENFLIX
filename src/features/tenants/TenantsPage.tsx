@@ -281,6 +281,7 @@ export default function TenantsPage() {
             "organization_id",
             profile.organization_id
           )
+          .is("archived_at", null)
           .order(
             "created_at",
             {
@@ -845,23 +846,23 @@ export default function TenantsPage() {
   async function deleteSelectedTenants() {
     if (!selectedTenantIds.length) return;
     const confirmed = window.confirm(
-      `Delete ${selectedTenantIds.length} selected tenant${selectedTenantIds.length > 1 ? "s" : ""}? Their tenant record, profile and login account will be removed. Assigned units will become available. Historical payment records are retained.`
+      `Archive ${selectedTenantIds.length} selected tenant${selectedTenantIds.length > 1 ? "s" : ""}? They will remain in Settings → Archived.`
     );
     if (!confirmed) return;
 
     setDeleting(true);
     setToast(null);
     try {
-      const { data, error } = await supabase.functions.invoke("tenant-delete", {
-        body: { tenant_ids: selectedTenantIds },
-      });
-      if (error) throw new Error(error.message || "Unable to delete tenants.");
-      if (!data?.success) throw new Error(data?.error || "Unable to delete tenants.");
-      setToast({ msg: `${data.deleted_count || selectedTenantIds.length} tenant(s) removed successfully.`, type: "success" });
+      const { error } = await supabase
+        .from("tenants")
+        .update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString(), status: "FORMER" })
+        .in("id", selectedTenantIds);
+      if (error) throw error;
+      setToast({ msg: `${selectedTenantIds.length} tenant(s) archived.`, type: "success" });
       exitSelectionMode();
       await fetchAll();
     } catch (error) {
-      setToast({ msg: error instanceof Error ? error.message : "Unable to delete tenants.", type: "error" });
+      setToast({ msg: error instanceof Error ? error.message : "Unable to archive tenants.", type: "error" });
     } finally {
       setDeleting(false);
     }
@@ -1115,7 +1116,7 @@ export default function TenantsPage() {
                   )}
                   {/* Header */}
 
-                  <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 mb-3">
+                  <div className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 mb-3">
                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
                       <span className="text-lg font-bold text-white">
                         {tenant.full_name
@@ -1132,7 +1133,7 @@ export default function TenantsPage() {
                       {tenant.phone && <div className="flex items-center gap-2 text-xs text-navy-400"><Phone size={11} /><span className="truncate">{tenant.phone}</span></div>}
                       {tenant.email && <div className="flex items-center gap-2 text-xs text-navy-400"><Mail size={11} /><span className="truncate">{tenant.email}</span></div>}
                     </div>
-                    <div className="col-start-2 -mt-1"><StatusBadge status={tenant.status} /></div>
+                    <div className="self-start justify-self-end"><StatusBadge status={tenant.status} /></div>
                   </div>
 
                   {/* Contact details are intentionally kept in the middle column above on mobile. */}
