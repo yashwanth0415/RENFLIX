@@ -58,10 +58,7 @@ const ROLES: {
   },
 ];
 
-type SettingsTab =
-  | "profile"
-  | "org"
-  | "security";
+type SettingsTab = "profile" | "org" | "security";
 
 export default function SettingsPage() {
   const {
@@ -71,6 +68,10 @@ export default function SettingsPage() {
   } = useAuth();
 
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("renflix-theme") as "dark" | "light") || "dark");
+  const [deviceNotifications, setDeviceNotifications] = useState(() => "Notification" in window && Notification.permission === "granted");
+  useEffect(() => { document.documentElement.classList.toggle("theme-light", theme === "light"); localStorage.setItem("renflix-theme", theme); }, [theme]);
+  async function toggleDeviceNotifications() { if (!("Notification" in window)) return; const permission = await Notification.requestPermission(); setDeviceNotifications(permission === "granted"); }
 
   const [tab, setTab] =
     useState<SettingsTab>(
@@ -716,7 +717,6 @@ export default function SettingsPage() {
     icon: React.ReactNode;
   }[] = [
     { id: "profile", label: "Profile", icon: <User size={15} /> },
-    ...(profile?.role === "TENANT" ? [] : [{ id: "org" as SettingsTab, label: "Organization", icon: <Building2 size={15} /> }]),
     { id: "security", label: "Security", icon: <Shield size={15} /> },
   ];
 
@@ -1167,25 +1167,28 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      <Card className="mt-5 border-red-500/20">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h3 className="font-display font-bold text-white">Sign out</h3>
-            <p className="text-xs text-navy-500 mt-1">Sign out of this RENFLIX account on this device.</p>
-          </div>
-          <Button
-            variant="ghost"
-            type="button"
-            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              navigate("/login", { replace: true });
-            }}
-          >
-            <LogOut size={15} /> Sign out
-          </Button>
+      {tab === "profile" && (
+        <div className="space-y-4">
+          <Card>
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div><h3 className="font-display font-bold text-white">Device notifications</h3><p className="text-xs text-navy-500 mt-1">Show RENFLIX alerts as device notifications.</p></div>
+              <Button size="sm" variant={deviceNotifications ? "secondary" : "primary"} onClick={toggleDeviceNotifications}>{deviceNotifications ? "Enabled" : "Enable"}</Button>
+            </div>
+          </Card>
+          <Card>
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div><h3 className="font-display font-bold text-white">Appearance</h3><p className="text-xs text-navy-500 mt-1">Choose the RENFLIX theme.</p></div>
+              <div className="flex gap-2"><Button size="sm" variant={theme === "light" ? "primary" : "secondary"} onClick={() => setTheme("light")}>Light</Button><Button size="sm" variant={theme === "dark" ? "primary" : "secondary"} onClick={() => setTheme("dark")}>Dark</Button></div>
+            </div>
+          </Card>
+          <Card className="border-red-500/20">
+            <div className="flex items-center justify-between gap-4 py-1">
+              {/*<div><h3 className="font-display font-bold text-white">Sign out</h3><p className="text-xs text-navy-500 mt-1">Sign out of this RENFLIX account on this device.</p></div>*/}
+              <Button variant="ghost" type="button" className="text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={async () => { if (window.confirm("Are you sure you want to sign out?")) { await supabase.auth.signOut(); navigate("/login", { replace: true }); } }}><LogOut size={15} /> Sign out</Button>
+            </div>
+          </Card>
         </div>
-      </Card>
+      )}
 
       {/* ====================================================== */}
       {/* TOAST                                                   */}

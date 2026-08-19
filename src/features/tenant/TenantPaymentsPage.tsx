@@ -89,12 +89,12 @@ export default function TenantPaymentsPage() {
     const w = window.open("", "_blank", "width=700,height=800"); if (w) { w.document.write(html); w.document.close(); }
   }
 
-  const pending = payments.filter(p => ["PENDING", "OVERDUE", "PARTIALLY_PAID"].includes(p.status));
+  const pending = payments.filter(p => ["PENDING", "DUE", "OVERDUE", "PARTIALLY_PAID"].includes(p.status));
   return <div className="animate-fade-in"><PageHeader title="Payments" subtitle="View and pay your monthly rent" />
     {unit && <Card className="mb-5"><div className="flex items-center gap-3"><Wallet className="text-blue-400"/><div><p className="text-xs text-navy-500">Current monthly rent</p><p className="text-xl font-bold text-white">₹{unit.monthly_rent.toLocaleString("en-IN")}</p></div></div></Card>}
     {loading ? <div className="flex flex-col gap-2">{[1,2,3].map(i => <Skeleton key={i} className="h-20" />)}</div> : payments.length === 0 ? <Card><EmptyState icon={<CreditCard size={28}/>} title="No payments yet" description="Your monthly rent payment will appear here." /></Card> : <div className="flex flex-col gap-3">{payments.map(p => <Card key={p.id}><div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between"><div><div className="flex items-center gap-2"><span className="text-lg font-bold text-white">₹{p.amount.toLocaleString("en-IN")}</span><span className="text-xs font-mono font-bold text-blue-300">#{p.payment_display_id || "—"}</span><StatusBadge status={p.status}/></div><p className="text-xs text-navy-500 mt-1">Due {p.due_date ? new Date(p.due_date).toLocaleDateString("en-IN") : "—"}{p.paid_date ? ` · Paid ${new Date(p.paid_date).toLocaleDateString("en-IN")}` : ""}</p>{p.reference_number && <p className="text-xs text-navy-600 font-mono mt-1">{p.reference_number}</p>}</div><div className="flex gap-2">{p.status === "UNDER_REVIEW" ? (
   <span className="text-xs text-amber-300 font-semibold px-2">Under review</span>
-) : ["PENDING", "OVERDUE", "PARTIALLY_PAID"].includes(p.status) ? (
+) : ["PENDING", "DUE", "OVERDUE", "PARTIALLY_PAID"].includes(p.status) ? (
   <div className="flex gap-2 flex-wrap justify-end">
     <Button onClick={() => pay(p)} loading={paying === p.id}>Pay Now</Button>
     <Button variant="secondary" onClick={() => { setDonePayment(p); setDoneForm({payment_method:"UPI",reference_number:"",remarks:""}); setProofFile(null); }}>

@@ -4,8 +4,20 @@ import { Bell, Check, X, Filter, Building2, Users, CreditCard, Wrench, FileText 
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import { Button, Card, PageHeader, EmptyState, ScrollArea, Select } from "../../components/ui";
-import { formatTime, getNotifIcon, getNotifIconColor, FILTER_OPTIONS } from "../../components/layout/AppShell";
+import { formatTime, getNotifIcon, getNotifIconColor, getNotificationDisplay, FILTER_OPTIONS } from "../../components/layout/AppShell";
 import type { Notification } from "../../components/layout/AppShell";
+
+function notificationRoute(n: Notification, role?: string) {
+  const type = n.entity_type || n.type;
+  const id = n.entity_id || (n.metadata?.payment_id as string | undefined);
+  if (type === "payment" || n.type?.includes("payment")) return "/payments";
+  if (type === "maintenance" || n.type?.includes("maintenance")) return "/maintenance";
+  if (type === "announcement" || n.type?.includes("announcement")) return role === "TENANT" ? "/announcements" : "/community";
+  if (type === "tenant" || n.type?.includes("tenant")) return id ? `/tenants/${id}` : "/tenants";
+  if (type === "property" || n.type?.includes("property")) return id ? `/properties/${id}` : "/properties";
+  if (type === "lease" || n.type?.includes("lease")) return "/leases";
+  return "/dashboard";
+}
 
 export default function NotificationsPage() {
   const { user, profile } = useAuth();
@@ -111,9 +123,11 @@ export default function NotificationsPage() {
         ) : (
           <div className="divide-y divide-navy-700">
             {filteredNotifications.map((notif) => (
-              <div
+              <button
+                type="button"
                 key={notif.id}
-                className={`p-4 hover:bg-navy-700/30 transition-colors ${!notif.read ? 'bg-navy-700/30' : ''}`}
+                onClick={async () => { await markAsRead([notif.id]); navigate(notificationRoute(notif, profile?.role)); }}
+                className={`w-full text-left p-4 hover:bg-navy-700/30 transition-colors ${!notif.read ? 'bg-navy-700/30' : ''}`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getNotifIconColor(notif.type)}`}>
@@ -122,16 +136,16 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className={`font-semibold text-white ${!notif.read ? '' : 'text-navy-300'}`}>{notif.title}</div>
-                        <div className="text-xs text-navy-400 truncate max-w-md">{notif.message}</div>
+                        <div className={`font-semibold text-white ${!notif.read ? '' : 'text-navy-300'}`}>{getNotificationDisplay(notif).title}</div>
+                        <div className="text-xs text-navy-400 truncate max-w-md">{getNotificationDisplay(notif).message}</div>
                       </div>
                       {!notif.read && (
-                        <button
+                        <span
                           onClick={(e) => { e.stopPropagation(); markAsRead([notif.id]); }}
-                          className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center hover:bg-blue-500/30 transition-colors flex-shrink-0"
+                          className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center hover:bg-blue-500/30 transition-colors flex-shrink-0 cursor-pointer"
                         >
                           <Check size={12} className="text-blue-400" />
-                        </button>
+                        </span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-2 text-xs text-navy-500">
@@ -140,7 +154,7 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}

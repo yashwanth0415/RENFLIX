@@ -120,8 +120,7 @@ export function Select({ label, error, options, className = "", id, ...props }: 
       )}
       <select
         id={inputId}
-        className={`w-full bg-navy-800/80 border ${error ? "border-red-500" : "border-navy-600"} rounded-lg px-3 py-2.5 text-sm text-navy-100 focus:outline-none focus:ring-2 focus:ring-blue-electric focus:border-transparent transition-all appearance-none cursor-pointer ${className}`}
-        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
+        className={`w-full bg-navy-800/80 border ${error ? "border-red-500" : "border-navy-600"} rounded-lg px-3 py-2.5 text-sm text-navy-100 focus:outline-none focus:ring-2 focus:ring-blue-electric focus:border-transparent transition-all appearance-none cursor-pointer select-clean ${className}`}
         {...props}
       >
         {options.map((o) => (
@@ -196,6 +195,7 @@ const statusColors: Record<string, string> = {
   RENEWED:           "bg-blue-500/15 text-blue-400 border-blue-500/30",
 
   PENDING:           "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  DUE:               "bg-orange-500/15 text-orange-400 border-orange-500/30",
   UNDER_REVIEW:      "bg-amber-500/15 text-amber-300 border-amber-400/30",
   RECEIVED:          "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   SUBMITTED:         "bg-amber-500/15 text-amber-400 border-amber-500/30",

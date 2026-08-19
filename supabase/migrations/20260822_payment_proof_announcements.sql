@@ -122,7 +122,7 @@ BEGIN
     RAISE EXCEPTION 'Payment not found';
   END IF;
 
-  IF v_payment.status NOT IN ('PENDING','OVERDUE','PARTIALLY_PAID') THEN
+  IF v_payment.status NOT IN ('PENDING','DUE','OVERDUE','PARTIALLY_PAID') THEN
     RAISE EXCEPTION 'This payment cannot be submitted for review';
   END IF;
 

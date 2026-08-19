@@ -48,6 +48,7 @@ const UNIT_STATUSES: {
 ];
 
 interface UnitWithProperty extends Unit {
+  tenant_count?: number;
   property?: {
     name: string;
   };
@@ -57,6 +58,7 @@ interface UnitForm {
   property_id: string;
   number_of_units: string;
   floor: string;
+  tenant_capacity: string;
   unit_number: string;
   unit_type: string;
   monthly_rent: string;
@@ -68,6 +70,7 @@ const defaultForm: UnitForm = {
   property_id: "",
   number_of_units: "",
   floor: "",
+  tenant_capacity: "1",
   unit_number: "",
   unit_type: "",
   monthly_rent: "",
@@ -229,9 +232,15 @@ export default function UnitsPage() {
         throw unitsError;
       }
 
-      setUnits(
-        (data || []) as UnitWithProperty[]
-      );
+      const loadedUnits = (data || []) as UnitWithProperty[];
+      const unitIds = loadedUnits.map(u => u.id);
+      if (unitIds.length) {
+        const { data: tenantRows } = await supabase.from("tenants").select("unit_id").in("unit_id", unitIds).eq("status", "ACTIVE");
+        const counts = new Map<string, number>();
+        (tenantRows || []).forEach((row: any) => counts.set(row.unit_id, (counts.get(row.unit_id) || 0) + 1));
+        loadedUnits.forEach(u => { u.tenant_count = counts.get(u.id) || 0; });
+      }
+      setUnits(loadedUnits);
 
       /*
        * Remove selected IDs that no longer exist.
@@ -642,6 +651,12 @@ export default function UnitsPage() {
             security_deposit:
               advance,
 
+            metadata: {
+              ...(editUnit.metadata || {}),
+              floor: form.floor ? Number(form.floor) : (editUnit.metadata as any)?.floor ?? null,
+              tenant_capacity: Math.max(1, Number(form.tenant_capacity) || 1),
+            },
+
             status:
               form.status,
 
@@ -708,10 +723,8 @@ export default function UnitsPage() {
         form.number_of_units
       );
 
-    const floor =
-      Number(
-        form.floor
-      );
+    const floor = Number(form.floor);
+    const tenantCapacity = Number(form.tenant_capacity);
 
     const monthlyRent =
       Number(
@@ -749,19 +762,18 @@ export default function UnitsPage() {
      * Floor:
      * 1 - 10
      */
-    if (
-      !Number.isInteger(
-        floor
-      ) ||
-      floor < 1 ||
-      floor > 10
-    ) {
+    if (!Number.isInteger(floor) || floor < 1 || floor > 100) {
       setToast({
         msg:
           "Floor must be between 1 and 10.",
         type: "error",
       });
 
+      return;
+    }
+
+    if (!Number.isInteger(tenantCapacity) || tenantCapacity < 1 || tenantCapacity > 50) {
+      setToast({ msg: "Tenants/unit must be between 1 and 50.", type: "error" });
       return;
     }
 
@@ -850,6 +862,7 @@ export default function UnitsPage() {
 
             metadata: {
               floor,
+              tenant_capacity: tenantCapacity,
             },
           })
         );
@@ -1414,8 +1427,8 @@ export default function UnitsPage() {
          */
 
         <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="w-full">
+            <table className="w-full table-fixed text-[15px] sm:text-sm">
               <thead>
                 <tr className="border-b border-navy-700">
                   {/*
@@ -1423,7 +1436,7 @@ export default function UnitsPage() {
                    * while selection mode is active.
                    */}
                   {selectionMode && (
-                    <th className="w-12 px-4 py-3 text-left">
+                    <th className="w-12 px-2 sm:px-4 py-3 text-left">
                       <input
                         type="checkbox"
                         checked={
@@ -1438,27 +1451,26 @@ export default function UnitsPage() {
                     </th>
                   )}
 
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                  <th className="w-[22%] text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Unit
                   </th>
 
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden md:table-cell">
-                    Property
-                  </th>
-
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider hidden sm:table-cell">
+                  <th className="hidden md:table-cell text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Type
                   </th>
+                   {/*<th className="text-left px-2 sm:px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider ">
+                    Property
+                  </th>*/}
 
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                  <th className="w-[22%] text-right px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Rent
                   </th>
 
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
+                  <th className="w-[22%] text-center px-1 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Status
                   </th>
 
-                  <th className="px-4 py-3" />
+                  <th className="w-[22%] px-1 sm:px-3 py-3" />
                 </tr>
               </thead>
 
@@ -1486,7 +1498,7 @@ export default function UnitsPage() {
                          * in selection mode.
                          */}
                         {selectionMode && (
-                          <td className="px-4 py-3">
+                          <td className="px-2 sm:px-4 py-3">
                             <input
                               type="checkbox"
                               checked={
@@ -1504,7 +1516,7 @@ export default function UnitsPage() {
                         )}
 
                         {/* Unit */}
-                        <td className="px-4 py-3">
+                        <td className="px-2 sm:px-4 py-3">
                           <div className="font-semibold text-white">
                             {
                               unit.unit_number
@@ -1518,20 +1530,21 @@ export default function UnitsPage() {
                               }
                             </div>
                           )}
+                          {/*<div className="text-[11px] text-navy-500 mt-1">{unit.tenant_count || 0} tenant{unit.tenant_count === 1 ? "" : "s"}</div>*/}
                         </td>
 
                         {/* Property */}
-                        <td className="px-4 py-3 text-navy-300 hidden md:table-cell">
+                        {/*<td className="px-2 sm:px-4 py-3 text-navy-300">
                           {
                             unit
                               .property
                               ?.name ||
                             "—"
                           }
-                        </td>
+                        </td>*/}
 
                         {/* Type */}
-                        <td className="px-4 py-3 text-navy-400 font-mono text-xs hidden sm:table-cell">
+                        <td className="px-2 sm:px-4 py-3 text-navy-400 font-mono text-xs hidden md:table-cell">
                           {
                             unit.unit_type ||
                             "—"
@@ -1539,7 +1552,7 @@ export default function UnitsPage() {
                         </td>
 
                         {/* Rent */}
-                        <td className="px-4 py-3 text-right font-mono text-emerald-400 font-semibold">
+                        <td className="px-2 sm:px-4 py-3 text-right font-mono text-emerald-400 font-semibold">
                           ₹
                           {Number(
                             unit.monthly_rent ||
@@ -1550,7 +1563,7 @@ export default function UnitsPage() {
                         </td>
 
                         {/* Status */}
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-2 sm:px-4 py-3 text-center">
                           <StatusBadge
                             status={
                               unit.status
@@ -1559,8 +1572,8 @@ export default function UnitsPage() {
                         </td>
 
                         {/* Edit */}
-                        <td className="px-4 py-3 text-right">
-                          <Button
+                        <td className="px-1 sm:px-3 py-3 text-center">
+                          <Button className="px-2 sm:px-3"
                             size="sm"
                             variant="ghost"
                             onClick={() =>
@@ -1650,38 +1663,13 @@ export default function UnitsPage() {
           {!editUnit ? (
             <>
               <div className="grid grid-cols-2 gap-3">
-                {/* Number of units */}
-                <Input
-                  label="Number of units"
-                  type="number"
-                  min="1"
-                  max="20"
-                  step="1"
-                  inputMode="numeric"
-                  placeholder="1 - 20"
-                  value={
-                    form.number_of_units
-                  }
-                  onKeyDown={
-                    preventNonNumericKeys
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    handleNumericChange(
-                      "number_of_units",
-                      event
-                        .target
-                        .value
-                    )
-                  }
-                  required
-                />
+                
 
                 {/* Floor */}
                 <Input
                   label="Floor"
                   type="number"
+                  className="order-1"
                   min="1"
                   max="10"
                   step="1"
@@ -1705,7 +1693,48 @@ export default function UnitsPage() {
                   }
                   required
                 />
+                {/* Number of units */}
+                <Input
+                  label="No. of Units"
+                  type="number"
+                  className="order-2"
+                  min="1"
+                  max="20"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="1 - 20"
+                  value={
+                    form.number_of_units
+                  }
+                  onKeyDown={
+                    preventNonNumericKeys
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    handleNumericChange(
+                      "number_of_units",
+                      event
+                        .target
+                        .value
+                    )
+                  }
+                  required
+                />
               </div>
+              <Input
+                label="Tenants / Unit"
+                type="number"
+                min="1"
+                max="50"
+                step="1"
+                inputMode="numeric"
+                placeholder="How many tenants can live in each unit"
+                value={form.tenant_capacity}
+                onKeyDown={preventNonNumericKeys}
+                onChange={(event) => handleNumericChange("tenant_capacity", event.target.value)}
+                required
+              />
 
               {/*<div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2.5">
                 <p className="text-xs text-blue-300">
@@ -1739,28 +1768,11 @@ export default function UnitsPage() {
             />
           )}
 
-          {/* Type */}
           <Input
             label="Type"
-            placeholder="2BHK"
-            value={
-              form.unit_type
-            }
-            onChange={(
-              event
-            ) =>
-              setForm(
-                (
-                  current
-                ) => ({
-                  ...current,
-                  unit_type:
-                    event
-                      .target
-                      .value,
-                })
-              )
-            }
+            placeholder="Enter type"
+            value={form.unit_type}
+            onChange={(event) => setForm(current => ({ ...current, unit_type: event.target.value }))}
             required
           />
 

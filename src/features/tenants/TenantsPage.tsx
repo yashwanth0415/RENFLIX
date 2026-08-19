@@ -106,6 +106,7 @@ export default function TenantsPage() {
     filterProp,
     setFilterProp,
   ] = useState("");
+  const [filterUnit, setFilterUnit] = useState("");
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
@@ -390,6 +391,11 @@ export default function TenantsPage() {
       [properties]
     );
 
+  const unitOptions = useMemo(() => [
+    { value: "", label: "All Units" },
+    ...units.filter(u => !filterProp || u.property_id === filterProp).map(u => ({ value: u.id, label: u.unit_number }))
+  ], [units, filterProp]);
+
   // ------------------------------------------------------------
   // Filter tenants
   // ------------------------------------------------------------
@@ -440,15 +446,10 @@ export default function TenantsPage() {
               tenant
             );
 
-          const matchesProperty =
-            !filterProp ||
-            tenantPropertyId ===
-              filterProp;
+          const matchesProperty = !filterProp || tenantPropertyId === filterProp;
+          const matchesUnit = !filterUnit || tenant.unit_id === filterUnit;
 
-          return (
-            matchesSearch &&
-            matchesProperty
-          );
+          return (matchesSearch && matchesProperty && matchesUnit);
         }
       );
     }, [
@@ -456,6 +457,7 @@ export default function TenantsPage() {
       units,
       search,
       filterProp,
+      filterUnit,
     ]);
 
   // ------------------------------------------------------------
@@ -629,6 +631,15 @@ export default function TenantsPage() {
           throw new Error(
             "The selected unit does not belong to the selected property."
           );
+        }
+      }
+
+      if (form.unit_id && !editTenant) {
+        const selectedUnit = units.find((u) => u.id === form.unit_id);
+        const capacity = Number((selectedUnit?.metadata as any)?.tenant_capacity || 1);
+        const { count: activeCount } = await supabase.from("tenants").select("id", { count: "exact", head: true }).eq("unit_id", form.unit_id).eq("status", "ACTIVE");
+        if (Number(activeCount || 0) >= capacity) {
+          throw new Error(`This unit already has ${activeCount || 0} active tenant(s). Its capacity is ${capacity}.`);
         }
       }
 
@@ -856,6 +867,18 @@ export default function TenantsPage() {
     }
   }
 
+  function handleSelectDeleteButton() {
+    if (!selectionMode) {
+      setSelectionMode(true);
+      return;
+    }
+    if (!selectedTenantIds.length) {
+      exitSelectionMode();
+      return;
+    }
+    deleteSelectedTenants();
+  }
+
   // ------------------------------------------------------------
   // Active tenant count
   // ------------------------------------------------------------
@@ -878,25 +901,11 @@ export default function TenantsPage() {
         subtitle={`${activeTenantCount} active tenants`}
         action={
           <div className="flex items-center gap-2">
-            {!selectionMode ? (
-              <Button variant="secondary" onClick={() => setSelectionMode(true)} size="sm">
-                <CheckSquare size={16} /> Select
-              </Button>
-            ) : (
-              <>
-                <Button variant="secondary" onClick={toggleSelectAll} size="sm">
-                  {selectedTenantIds.length === filteredTenants.length && filteredTenants.length > 0 ? "Clear" : "Select All"}
-                </Button>
-                <Button variant="secondary" onClick={exitSelectionMode} size="sm">
-                  <X size={16} /> Cancel
-                </Button>
-                <Button onClick={deleteSelectedTenants} size="sm" disabled={!selectedTenantIds.length} loading={deleting}>
-                  <Trash2 size={16} /> Delete{selectedTenantIds.length ? ` (${selectedTenantIds.length})` : ""}
-                </Button>
-              </>
-            )}
+            <Button variant={selectionMode ? "danger" : "secondary"} onClick={handleSelectDeleteButton} size="sm" loading={deleting}>
+              {selectionMode ? `Delete${selectedTenantIds.length ? ` (${selectedTenantIds.length})` : ""}` : "Select"}
+            </Button>
             <Button onClick={openAdd} size="sm" disabled={selectionMode}>
-              <Plus size={16} /> Add Tenant
+              <Plus size={16} /><span className="hidden sm:inline">Add Tenant</span><span className="sm:hidden">Add</span>
             </Button>
           </div>
         }
@@ -906,10 +915,10 @@ export default function TenantsPage() {
       {/* SEARCH + PROPERTY FILTER                               */}
       {/* ====================================================== */}
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-[1fr_220px_180px] gap-3 mb-5">
         {/* Search */}
 
-        <div className="relative flex-1">
+        <div className="relative col-span-2 lg:col-span-1">
           <Search
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500"
@@ -935,7 +944,7 @@ export default function TenantsPage() {
         {/* Property filter */}
 
         <select
-          className="bg-navy-800 border border-navy-700 rounded-lg px-3 py-2.5 text-sm text-navy-100 focus:outline-none focus:ring-2 focus:ring-blue-electric min-w-[190px]"
+          className="bg-navy-800 border border-navy-700 rounded-lg px-3 py-2.5 text-sm text-navy-100 focus:outline-none focus:ring-2 focus:ring-blue-electric w-full min-w-0"
           value={
             filterProp
           }
@@ -967,6 +976,10 @@ export default function TenantsPage() {
             )
           )}
         </select>
+
+        <select className="bg-navy-800 border border-navy-700 rounded-lg px-3 py-2.5 text-sm text-navy-100 focus:outline-none focus:ring-2 focus:ring-blue-electric w-full min-w-0" value={filterUnit} onChange={e => setFilterUnit(e.target.value)}>
+          {unitOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
       </div>
 
       {/* ====================================================== */}
@@ -992,11 +1005,7 @@ export default function TenantsPage() {
 
           <button
             type="button"
-            onClick={() =>
-              setFilterProp(
-                ""
-              )
-            }
+            onClick={() => { setFilterProp(""); setFilterUnit(""); }}
             className="text-xs text-navy-500 hover:text-white transition-colors"
           >
             Clear
@@ -1106,9 +1115,9 @@ export default function TenantsPage() {
                   )}
                   {/* Header */}
 
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-white">
+                  <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 mb-3">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg font-bold text-white">
                         {tenant.full_name
                           .trim()
                           .charAt(
@@ -1118,24 +1127,16 @@ export default function TenantsPage() {
                       </span>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="font-display font-semibold text-white truncate">
-                        {
-                          tenant.full_name
-                        }
-                      </div>
-
-                      <StatusBadge
-                        status={
-                          tenant.status
-                        }
-                      />
+                    <div className="min-w-0 flex flex-col gap-1">
+                      <div className="font-display font-semibold text-white text-sm sm:text-base truncate">{tenant.full_name}</div>
+                      {tenant.phone && <div className="flex items-center gap-2 text-xs text-navy-400"><Phone size={11} /><span className="truncate">{tenant.phone}</span></div>}
+                      {tenant.email && <div className="flex items-center gap-2 text-xs text-navy-400"><Mail size={11} /><span className="truncate">{tenant.email}</span></div>}
                     </div>
+                    <div className="col-start-2 -mt-1"><StatusBadge status={tenant.status} /></div>
                   </div>
 
-                  {/* Contact */}
-
-                  <div className="flex flex-col gap-1">
+                  {/* Contact details are intentionally kept in the middle column above on mobile. */}
+                  <div className="hidden">
                     {tenant.phone && (
                       <div className="flex items-center gap-2 text-xs text-navy-400">
                         <Phone
@@ -1321,7 +1322,7 @@ export default function TenantsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Emergency contact"
+              label="Emergency"
               placeholder="Contact name"
               value={
                 form.emergency_contact_name
@@ -1344,6 +1345,7 @@ export default function TenantsPage() {
 
             <Input
               label="Emergency phone"
+              placeholder="9876543210"
               type="tel"
               value={
                 form.emergency_contact_phone

@@ -798,8 +798,8 @@ BEGIN
     recipient,
     NEW.organization_id,
     'property_created',
-    'New Property Added',
-    'Property "' || NEW.name || '" has been created.',
+    (NEW.name || ' Property Added'),
+    ('Property ' || NEW.name || ' was added successfully.'),
     'property',
     NEW.id,
     jsonb_build_object(
@@ -839,9 +839,9 @@ BEGIN
     recipient,
     NEW.organization_id,
     'tenant_added',
-    'New Tenant Added',
-    'Tenant "' || NEW.full_name || '" has been added' ||
-      CASE WHEN property_name IS NOT NULL THEN ' to ' || property_name ELSE '' END || '.',
+    (NEW.full_name || ' Tenant Added'),
+    ('Tenant ' || NEW.full_name || ' was added' ||
+      CASE WHEN property_name IS NOT NULL THEN ' to ' || property_name ELSE '' END || '.'),
     'tenant',
     NEW.id,
     jsonb_build_object(

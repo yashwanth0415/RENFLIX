@@ -2,25 +2,37 @@ import { useEffect, useState } from "react";
 import { Globe, Plus, Megaphone, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
-import { Button, Card, Modal, Input, Textarea, PageHeader, EmptyState, Skeleton, Toast } from "../../components/ui";
+import { Button, Card, Modal, Input, Textarea, PageHeader, EmptyState, Skeleton, Toast, Select } from "../../components/ui";
 
-interface Announcement { id: string; organization_id: string; title: string; body: string; priority: string; created_at: string; }
+interface Announcement { id: string; organization_id: string; property_id?: string | null; unit_id?: string | null; title: string; body: string; priority: string; created_at: string; }
 
 export default function CommunityPage() {
   const { profile } = useAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [properties, setProperties] = useState<{id:string;name:string}[]>([]);
+  const [units, setUnits] = useState<{id:string;unit_number:string;property_id:string}[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ title: "", body: "", priority: "NORMAL" });
+  const [form, setForm] = useState({ property_id: "", unit_id: "", title: "", body: "", priority: "NORMAL" });
   const [submitting, setSubmitting] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
-    if (profile?.organization_id) fetchAnnouncements();
+    if (profile?.organization_id) { fetchAnnouncements(); fetchTargets(); }
     else setLoading(false);
   }, [profile?.organization_id]);
+
+  async function fetchTargets() {
+    if (!profile?.organization_id) return;
+    const [{ data: props }, { data: us }] = await Promise.all([
+      supabase.from("properties").select("id,name").eq("organization_id", profile.organization_id).eq("status","ACTIVE").order("name"),
+      supabase.from("units").select("id,unit_number,property_id").eq("organization_id", profile.organization_id).order("property_id").order("unit_number")
+    ]);
+    setProperties((props || []) as {id:string;name:string}[]);
+    setUnits((us || []) as {id:string;unit_number:string;property_id:string}[]);
+  }
 
   useEffect(() => {
     if (!profile?.organization_id) return;
@@ -46,12 +58,13 @@ export default function CommunityPage() {
     const { data: authData } = await supabase.auth.getUser();
     const { error } = await supabase.from("community_announcements").insert({
       organization_id: profile.organization_id, created_by: authData.user?.id || null,
+      property_id: form.property_id || null, unit_id: form.unit_id || null,
       title: form.title.trim(), body: form.body.trim(), priority: form.priority,
     });
     if (error) setToast({ msg: error.message, type: "error" });
     else {
       setToast({ msg: "Announcement published and tenants notified.", type: "success" });
-      setShowModal(false); setForm({ title: "", body: "", priority: "NORMAL" }); fetchAnnouncements();
+      setShowModal(false); setForm({ property_id: "", unit_id: "", title: "", body: "", priority: "NORMAL" }); fetchAnnouncements();
     }
     setSubmitting(false);
   }
@@ -83,11 +96,11 @@ export default function CommunityPage() {
   return <div className="animate-fade-in">
     <PageHeader title="Community" subtitle="Announcements and community management" action={
       <div className="flex items-center gap-2">
-        {selectionMode ? (
-          <Button variant="secondary" size="sm" onClick={deleteSelected} disabled={!selectedIds.length}><Trash2 size={15}/> Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}</Button>
+        {/*{selectionMode ? (
+          <Button variant="danger" size="sm" onClick={deleteSelected} disabled={!selectedIds.length}><Trash2 size={15}/> Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}</Button>
         ) : (
           <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
-        )}
+        )}*/}
         <Button size="sm" onClick={() => setShowModal(true)}><Plus size={16}/> Announce</Button>
       </div>
     } />
@@ -95,7 +108,7 @@ export default function CommunityPage() {
     {loading ? <div className="flex flex-col gap-3">{[1,2,3,4].map(i=><Skeleton key={i} className="h-28"/>)}</div>
       : announcements.length === 0 ? <Card><EmptyState icon={<Megaphone size={28}/>} title="No announcements yet" description="Publish your first community announcement." action={<Button size="sm" onClick={()=>setShowModal(true)}><Plus size={14}/> Announce</Button>}/></Card>
       : <div className="flex flex-col gap-3">{announcements.map(ann =>
-        <div key={ann.id} className={`bg-navy-800 border border-navy-700 rounded-xl p-4 ${priorityColor[ann.priority] || ""} flex gap-3`}>
+        <div key={ann.id} className={`bg-navy-800/90 border border-navy-700 rounded-2xl p-5 shadow-lg shadow-black/10 hover:border-blue-500/30 transition-all ${priorityColor[ann.priority] || ""} flex gap-3`}>
           {selectionMode && <button type="button" onClick={()=>toggle(ann.id)} className="mt-1 flex-shrink-0"><span className={`inline-flex w-5 h-5 rounded border ${selectedIds.includes(ann.id) ? "bg-blue-600 border-blue-500" : "border-navy-500"}`}>{selectedIds.includes(ann.id) && <span className="text-white text-xs m-auto">✓</span>}</span></button>}
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3 mb-2">
@@ -109,6 +122,8 @@ export default function CommunityPage() {
 
     <Modal open={showModal} onClose={()=>setShowModal(false)} title="New Announcement">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Select label="Property" value={form.property_id} onChange={e=>setForm(f=>({...f,property_id:e.target.value,unit_id:""}))} options={[{value:"",label:"All Properties"},...properties.map(p=>({value:p.id,label:p.name}))]} />
+        <Select label="Units" value={form.unit_id} onChange={e=>setForm(f=>({...f,unit_id:e.target.value}))} options={[{value:"",label:"All Units"},...units.filter(u=>!form.property_id || u.property_id===form.property_id).map(u=>({value:u.id,label:u.unit_number}))]} />
         <Input label="Title" value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} required />
         <Textarea label="Message" value={form.body} onChange={e=>setForm(f=>({...f,body:e.target.value}))} required />
         <div><label className="text-xs font-semibold text-navy-300 font-display uppercase tracking-wider">Priority</label><div className="flex gap-2 mt-1">{["NORMAL","IMPORTANT","URGENT"].map(p=><button key={p} type="button" onClick={()=>setForm(f=>({...f,priority:p}))} className={`flex-1 py-2 rounded-lg text-sm font-semibold border ${form.priority===p ? "bg-blue-600 border-blue-500 text-white":"bg-navy-700 border-navy-600 text-navy-400"}`}>{p}</button>)}</div></div>

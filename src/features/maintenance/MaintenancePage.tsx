@@ -16,22 +16,11 @@ const CATEGORIES = [
   "Gas", "Water Heater", "Flooring", "Roofing", "Appliance", "Other",
 ];
 
-const STATUSES: MaintenanceStatus[] = [
-  "SUBMITTED", "REVIEWED", "ASSIGNED", "ACCEPTED", "SCHEDULED",
-  "IN_PROGRESS", "WAITING_FOR_PARTS", "COMPLETED", "VERIFIED", "CLOSED",
-];
+const STATUSES: MaintenanceStatus[] = ["SUBMITTED", "IN_PROGRESS", "COMPLETED", "CLOSED"];
 
 const NEXT_STATUS: Record<MaintenanceStatus, MaintenanceStatus | null> = {
-  SUBMITTED: "REVIEWED",
-  REVIEWED: "ASSIGNED",
-  ASSIGNED: "ACCEPTED",
-  ACCEPTED: "SCHEDULED",
-  SCHEDULED: "IN_PROGRESS",
-  IN_PROGRESS: "COMPLETED",
-  WAITING_FOR_PARTS: "IN_PROGRESS",
-  COMPLETED: "VERIFIED",
-  VERIFIED: "CLOSED",
-  CLOSED: null,
+  SUBMITTED: "IN_PROGRESS", IN_PROGRESS: "COMPLETED", COMPLETED: "CLOSED", CLOSED: null,
+  REVIEWED: "IN_PROGRESS", ASSIGNED: "IN_PROGRESS", ACCEPTED: "IN_PROGRESS", SCHEDULED: "IN_PROGRESS", WAITING_FOR_PARTS: "IN_PROGRESS", VERIFIED: "CLOSED"
 };
 
 const defaultForm = {
@@ -323,7 +312,7 @@ export default function MaintenancePage() {
         subtitle={`${openCount} open request${openCount !== 1 ? "s" : ""}`}
         action={
           selectionMode ? (
-            <Button variant="secondary" size="sm" onClick={deleteSelectedMaintenance} disabled={!selectedIds.length} className="text-red-400">
+            <Button variant="danger" size="sm" onClick={() => selectedIds.length ? deleteSelectedMaintenance() : setSelectionMode(false)} >
               Delete{selectedIds.length ? ` (${selectedIds.length})` : ""}
             </Button>
           ) : (
@@ -331,8 +320,8 @@ export default function MaintenancePage() {
           )
         }
       />
-      <div className="flex flex-wrap gap-3 mb-5">
-        <div className="relative flex-1 min-w-[180px]">
+      <div className="grid grid-cols-2 lg:grid-cols-[1fr_180px_180px] gap-3 mb-5">
+        <div className="relative col-span-2 lg:col-span-1 min-w-0">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500" />
           <input
             className="w-full bg-navy-800 border border-navy-700 rounded-lg pl-9 pr-4 py-2.5 text-sm text-navy-100 placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-blue-electric"
@@ -341,11 +330,11 @@ export default function MaintenancePage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select className="bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm text-navy-100" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+        <select className="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm text-navy-100" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="">All status</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
         </select>
-        <select className="bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm text-navy-100" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+        <select className="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm text-navy-100" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
           <option value="">All priority</option>
           {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
@@ -380,17 +369,14 @@ export default function MaintenancePage() {
                     <div className="font-display font-semibold text-white text-sm">{req.title}</div>
                     <div className="text-xs text-navy-400">{req.category} · {prop?.name || "Unknown property"}</div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <StatusBadge status={req.priority} />
-                    <StatusBadge status={req.status} />
-                  </div>
+                  <div className="flex-shrink-0"><StatusBadge status={req.status} /></div>
                 </div>
                 <p className="text-xs text-navy-500 line-clamp-2 mb-3">{req.description}</p>
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-navy-600">{new Date(req.created_at).toLocaleDateString("en-IN")}</div>
                   {next && (
-                    <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); advanceStatus(req); }}>
-                      → {next.replace(/_/g, " ")}
+                    <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setSelected(req); }}>
+                      Update status
                     </Button>
                   )}
                 </div>
@@ -403,7 +389,6 @@ export default function MaintenancePage() {
       {selected && (
         <Modal open={!!selected} onClose={() => setSelected(null)} title="Maintenance Request" width="max-w-lg">
           <div className="flex flex-col gap-4">
-            <div className="flex gap-2 flex-wrap"><StatusBadge status={selected.priority} /><StatusBadge status={selected.status} /></div>
             <div>
               <div className="font-display font-bold text-white text-base mb-1">{selected.title}</div>
               <div className="text-xs text-navy-400 mb-3">{selected.category}</div>
@@ -414,7 +399,24 @@ export default function MaintenancePage() {
               {selected.estimated_cost != null && <div className="flex justify-between"><span>Estimated cost</span><span>₹{selected.estimated_cost.toLocaleString("en-IN")}</span></div>}
               {selected.actual_cost != null && <div className="flex justify-between"><span>Actual cost</span><span>₹{selected.actual_cost.toLocaleString("en-IN")}</span></div>}
             </div>
-            <Select
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Priority"
+                value={selected.priority}
+                onChange={async (e) => {
+                  const nextPriority = e.target.value as MaintenancePriority;
+                  const { error } = await supabase.from("maintenance_requests").update({ priority: nextPriority, updated_at: new Date().toISOString() }).eq("id", selected.id);
+                  if (error) setToast({ msg: error.message, type: "error" });
+                  else { setSelected({ ...selected, priority: nextPriority }); fetchAll(); }
+                }}
+                options={[
+                  { value: "LOW", label: "Low" },
+                  { value: "MEDIUM", label: "Medium" },
+                  { value: "HIGH", label: "High" },
+                  { value: "URGENT", label: "Urgent" },
+                ]}
+              />
+              <Select
               label="Update status"
               value={selected.status}
               onChange={async (e) => {
@@ -436,7 +438,8 @@ export default function MaintenancePage() {
                 }
               }}
               options={STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ") }))}
-            />
+              />
+            </div>
           </div>
         </Modal>
       )}

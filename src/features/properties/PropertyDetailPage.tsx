@@ -156,6 +156,7 @@ function formatINR(
 }
 
 export default function PropertyDetailPage() {
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, []);
   const { profile } =
     useAuth();
 
@@ -1072,7 +1073,7 @@ export default function PropertyDetailPage() {
           </span>
 
           {property.property_display_id && (
-            <span className="text-[9px] sm:text-[10px] md:text-xs text-navy-300 bg-navy-950/50 border border-white/10 px-1.5 sm:px-2 py-1 rounded-md font-mono">
+            <span className="hidden">
               ID:{" "}
               {
                 property.property_display_id
@@ -1627,6 +1628,7 @@ export default function PropertyDetailPage() {
           />
 
           <Textarea
+            className="hidden"
             label="Description"
             placeholder="Brief description..."
             value={

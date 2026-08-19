@@ -161,7 +161,7 @@ export default function PropertiesPage() {
             </button>
             <Button onClick={openAdd} size="sm">
               <Plus size={16} />
-              Add Property
+              <span className="hidden sm:inline">Add Property</span><span className="sm:hidden">Add</span>
             </Button>
           </div>
         }
@@ -188,7 +188,7 @@ export default function PropertiesPage() {
             icon={<Building2 size={28} />}
             title="No properties yet"
             description="Add your first property to start managing it."
-            action={<Button onClick={openAdd} size="sm"><Plus size={14} /> Add Property</Button>}
+            action={<Button onClick={openAdd} size="sm"><Plus size={14} /> <span className="hidden sm:inline">Add Property</span><span className="sm:hidden">Add</span></Button>}
           />
         </Card>
       ) : viewMode === "grid" ? (
@@ -227,6 +227,7 @@ export default function PropertiesPage() {
             options={PROPERTY_TYPES}
           />
           <Textarea
+            className="hidden"
             label="Description"
             placeholder="Brief description..."
             value={form.description}
@@ -306,13 +307,13 @@ function PropertyCard({ property: p }: { property: Property }) {
       <div className="p-4">
         <h3 className="font-display font-bold text-white text-base mb-1">{p.name}</h3>
         {p.property_display_id && (
-          <div className="text-xs text-navy-500 bg-navy-700 px-2 py-0.5 rounded font-mono inline-block mb-2">ID: {p.property_display_id}</div>
+          <div className="hidden">ID: {p.property_display_id}</div>
         )}
         <div className="flex items-center gap-1 text-xs text-navy-400 mb-3">
           <MapPin size={12} />
           <span>{p.city}, {p.state}</span>
         </div>
-        <div className="text-xs text-navy-500 line-clamp-2 mb-4">{p.description || p.address}</div>
+        <div className="hidden">{p.description || p.address}</div>
       </div>
     </div>
   );
@@ -338,7 +339,7 @@ function PropertyRow({ property: p }: { property: Property }) {
         <div className="font-display font-semibold text-white text-sm">{p.name}</div>
         <div className="text-xs text-navy-400">{p.city} · {p.property_type.replace(/_/g, " ")}</div>
         {p.property_display_id && (
-          <div className="text-xs text-navy-500 font-mono">ID: {p.property_display_id}</div>
+          <div className="hidden">ID: {p.property_display_id}</div>
         )}
       </div>
       <StatusBadge status={p.status} />

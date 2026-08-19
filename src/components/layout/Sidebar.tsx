@@ -23,11 +23,11 @@ const MAIN_OWNER: NavItem[] = [
   { to: "/tenants", icon: <Users size={18} />, label: "Tenants" },
   { to: "/payments", icon: <CreditCard size={18} />, label: "Payments" },
   { to: "/maintenance", icon: <Wrench size={18} />, label: "Maintenance" },
+   { to: "/community", icon: <Globe size={18} />, label: "Community", beta: true }
 ];
 
 const MORE_ITEMS: NavItem[] = [
   // { to: "/messages", icon: <MessageSquare size={18} />, label: "Messages", beta: true },
-  { to: "/community", icon: <Globe size={18} />, label: "Community", beta: true },
   { to: "/leases", icon: <FileText size={18} />, label: "Leases", beta: true },
   { to: "/analytics", icon: <BarChart3 size={18} />, label: "Analytics", beta: true },
   { to: "/intelligence", icon: <Cpu size={18} />, label: "Intelligence", beta: true },
@@ -148,3 +148,4 @@ export default function Sidebar({ profile, mobile, onClose }: SidebarProps) {
     </aside>
   );
 }
+

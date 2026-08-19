@@ -197,6 +197,25 @@ export function getNotifIconColor(
   }
 }
 
+export function getNotificationDisplay(notification: Notification) {
+  const metadata = notification.metadata || {};
+  const propertyName = typeof metadata.property_name === "string" ? metadata.property_name : "";
+  const tenantName = typeof metadata.tenant_name === "string" ? metadata.tenant_name : "";
+  if (notification.type === "property_created") {
+    return {
+      title: propertyName ? `${propertyName} Property Added` : notification.title,
+      message: propertyName ? `Property ${propertyName} was added successfully.` : notification.message,
+    };
+  }
+  if (notification.type === "tenant_added") {
+    return {
+      title: tenantName ? `${tenantName} Tenant Added` : notification.title,
+      message: tenantName ? `Tenant ${tenantName} was added successfully.` : notification.message,
+    };
+  }
+  return { title: notification.title, message: notification.message };
+}
+
 export const FILTER_OPTIONS = [
   {
     value: "all",
@@ -225,6 +244,21 @@ export const FILTER_OPTIONS = [
 ];
 
 // ------------------------------------------------------------
+// Notification navigation
+// ------------------------------------------------------------
+export function getNotificationRoute(notification: Notification, role?: string) {
+  const type = notification.entity_type || notification.type;
+  const id = notification.entity_id || (notification.metadata?.payment_id as string | undefined);
+  if (type === "payment" || notification.type.includes("payment")) return "/payments";
+  if (type === "maintenance" || notification.type.includes("maintenance")) return "/maintenance";
+  if (type === "announcement" || notification.type.includes("announcement")) return role === "TENANT" ? "/announcements" : "/community";
+  if (type === "tenant" || notification.type.includes("tenant")) return id ? `/tenants/${id}` : "/tenants";
+  if (type === "property" || notification.type.includes("property")) return id ? `/properties/${id}` : "/properties";
+  if (type === "lease" || notification.type.includes("lease")) return "/leases";
+  return "/dashboard";
+}
+
+// ------------------------------------------------------------
 // AppShell
 // ------------------------------------------------------------
 
@@ -245,6 +279,11 @@ export default function AppShell() {
     mobileOpen,
     setMobileOpen,
   ] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("renflix-theme");
+    document.documentElement.classList.toggle("theme-light", savedTheme === "light");
+  }, []);
 
   const [
     dbStatus,
@@ -470,6 +509,9 @@ export default function AppShell() {
               (previous) =>
                 previous + 1
             );
+            if ("Notification" in window && Notification.permission === "granted") {
+              try { new Notification(`RENFLIX · ${newNotif.title}`, { body: newNotif.message, icon: "/favicon.ico", tag: newNotif.id }); } catch {}
+            }
           }
         )
         .subscribe();
@@ -763,9 +805,14 @@ export default function AppShell() {
             />
           </button>
 
-          <div className="font-display font-extrabold gradient-text text-lg">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="font-display font-extrabold gradient-text text-lg"
+            aria-label="Reload RENFLIX"
+          >
             RENFLIX
-          </div>
+          </button>
 
           {/* Mobile notifications */}
 
@@ -836,12 +883,11 @@ export default function AppShell() {
         {/* -------------------------------------------------- */}
 
         <header className="hidden lg:flex items-center justify-between px-6 py-3 bg-navy-900 border-b border-navy-800 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 dot-pulse" />
-
-            <span className="text-xs text-navy-500 font-mono">
-              Live · Supabase connected
-            </span>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 dot-pulse" />
+              <span className="text-xs text-navy-500 font-mono">Live · Supabase connected</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -950,50 +996,12 @@ function NotificationDropdown({
   function handleNotificationClick(
     notification: Notification
   ) {
-    if (
-      !notification.read
-    ) {
-      onMarkRead([
-        notification.id,
-      ]);
-    }
-
-    if (
-      notification.entity_type &&
-      notification.entity_id
-    ) {
-      const routes: Record<
-        string,
-        string
-      > = {
-        property: `/properties/${notification.entity_id}`,
-        tenant: `/tenants/${notification.entity_id}`,
-        payment: "/payments",
-        maintenance:
-          "/maintenance",
-        lease: "/leases",
-      };
-
-      const route =
-        routes[
-          notification
-            .entity_type
-        ];
-
-      if (route) {
-        onNavigate(
-          route
-        );
-
-        return;
-      }
-    }
-
-    onClose();
+    if (!notification.read) onMarkRead([notification.id]);
+    onNavigate(getNotificationRoute(notification));
   }
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 md:w-96 bg-navy-800 border border-navy-700 rounded-2xl shadow-2xl z-50 overflow-hidden">
+    <div className="absolute right-0 top-full mt-2 w-[min(18rem,calc(100vw-2rem))] md:w-96 bg-navy-800 border border-navy-700 rounded-2xl shadow-2xl z-50 overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-navy-700">
         <h3 className="font-display font-bold text-white">
           Notifications
@@ -1071,20 +1079,10 @@ function NotificationDropdown({
                     <div className="flex-1 min-w-0">
                       <div
                         className={`font-semibold ${
-                          notification.read
-                            ? "text-navy-300"
-                            : "text-white"
+                          notification.read ? "text-navy-300" : "text-white"
                         }`}
                       >
-                        {
-                          notification.title
-                        }
-                      </div>
-
-                      <div className="text-xs text-navy-400 truncate">
-                        {
-                          notification.message
-                        }
+                        {getNotificationDisplay(notification).title}
                       </div>
 
                       <div className="text-[10px] text-navy-600 mt-1">
@@ -1129,24 +1127,16 @@ function NotificationDropdown({
 function SplashScreen() {
   return (
     <div className="min-h-screen bg-navy-950 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center mx-auto mb-5 shadow-xl animate-pulse-glow">
-          <Building2
-            size={26}
-            className="text-white"
-          />
+      <div className="flex flex-col items-center gap-6 animate-fade-in">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-2xl">
+            <span className="text-white font-display font-extrabold text-2xl">R</span>
+          </div>
+          <div className="absolute -inset-2 rounded-[20px] border-2 border-transparent border-t-blue-500 animate-spin" />
         </div>
-
-        <div className="font-display text-xl font-extrabold gradient-text mb-2">
-          RENFLIX
-        </div>
-
-        <div className="text-navy-500 text-xs font-mono">
-          Loading your workspace…
-        </div>
-
-        <div className="mt-5 w-36 h-1 bg-navy-800 rounded-full overflow-hidden mx-auto">
-          <div className="h-full w-1/2 bg-blue-500 rounded-full animate-pulse" />
+        <div className="text-center">
+          <div className="font-display font-extrabold gradient-text text-2xl mb-1">RENFLIX</div>
+          <div className="text-xs text-navy-600 font-mono">Connecting to Supabase…</div>
         </div>
       </div>
     </div>

@@ -392,33 +392,80 @@ tr { transition: background-color 0.12s ease; }
     scroll-behavior: auto !important;
   }
 }
-/* ── Mobile / PWA form controls ───────────────────────────────────── */
+/* ── Form controls / custom select arrow ───────────────────────────── */
 select,
-select option {
+.select-clean {
+  -webkit-appearance: none;
+  appearance: none;
   color-scheme: dark;
-}
-select {
   color: #e2e8f0;
   background-color: #0f172a;
   background-image: linear-gradient(45deg, transparent 50%, #ffffff 50%), linear-gradient(135deg, #ffffff 50%, transparent 50%);
   background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
-  padding-right: 2.5rem;
+  padding-right: 2.5rem !important;
 }
+
 @media (max-width: 640px) {
-  select {
-    -webkit-appearance: none;
-    appearance: none;
-    background-color: #0f172a !important;
-    color: #e2e8f0 !important;
-    background-image: linear-gradient(45deg, transparent 50%, #ffffff 50%), linear-gradient(135deg, #ffffff 50%, transparent 50%) !important;
-    background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50% !important;
-    background-size: 5px 5px, 5px 5px !important;
-    background-repeat: no-repeat !important;
-    padding-right: 2.5rem;
-  }
-  input, select, textarea, button {
-    font-size: 16px;
-  }
+  input, select, textarea, button { font-size: 16px; }
+}
+
+/* ── RENFLIX light theme: brighter, not a washed-out dark-mode filter ─ */
+html.theme-light body {
+  background: #f4f8ff;
+  color: #102040;
+}
+html.theme-light .bg-navy-950 { background-color: #eef5ff !important; }
+html.theme-light .bg-navy-900 {
+  background-color: #ffffff !important;
+  border-color: #d8e5f5 !important;
+}
+html.theme-light .bg-navy-800,
+html.theme-light .bg-navy-800\/80 {
+  background-color: #ffffff !important;
+  border-color: #d8e5f5 !important;
+  box-shadow: 0 10px 30px rgba(30, 64, 175, 0.07);
+}
+html.theme-light .bg-navy-700 { background-color: #edf5ff !important; }
+html.theme-light .bg-navy-600 { background-color: #dbe8f7 !important; }
+html.theme-light .bg-navy-950\/85 { background-color: rgba(15, 23, 42, 0.72) !important; }
+html.theme-light .text-white { color: #0f1f3d !important; }
+html.theme-light .text-navy-100 { color: #102040 !important; }
+html.theme-light .text-navy-200 { color: #19335d !important; }
+html.theme-light .text-navy-300 { color: #2b466d !important; }
+html.theme-light .text-navy-400 { color: #58708f !important; }
+html.theme-light .text-navy-500,
+html.theme-light .text-navy-600 { color: #7085a0 !important; }
+html.theme-light .border-navy-700,
+html.theme-light .border-navy-600 { border-color: #d7e3f1 !important; }
+html.theme-light .hover\:bg-navy-700:hover { background-color: #e5f0ff !important; }
+html.theme-light input,
+html.theme-light textarea,
+html.theme-light select {
+  color: #102040 !important;
+  background-color: #ffffff !important;
+  border-color: #cbdced !important;
+}
+html.theme-light input::placeholder,
+html.theme-light textarea::placeholder { color: #8aa0ba !important; }
+html.theme-light select {
+  color-scheme: light;
+  background-image: linear-gradient(45deg, transparent 50%, #35557e 50%), linear-gradient(135deg, #35557e 50%, transparent 50%);
+}
+html.theme-light .sidebar-link { color: #58708f; }
+html.theme-light .sidebar-link:hover { background: rgba(37, 99, 235, 0.08); color: #19335d; }
+html.theme-light .sidebar-link.active { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+html.theme-light .btn-primary { color: #ffffff !important; }
+html.theme-light .gradient-text,
+html.theme-light .hero-gradient-text {
+  background: linear-gradient(135deg, #2563eb, #7c3aed, #0891b2, #4f46e5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+html.theme-light .glass {
+  background: rgba(255,255,255,0.82);
+  border-color: rgba(148,163,184,0.25);
+  box-shadow: 0 12px 34px rgba(30,64,175,0.08);
 }

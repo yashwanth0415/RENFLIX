@@ -70,8 +70,9 @@ export default function TenantDetailPage() {
       const { data, error } = await supabase
         .from("tenants")
         .select("*")
-        .eq("tenant_display_id", displayId)
-        .single();
+        .or(`tenant_display_id.eq.${displayId},id.eq.${displayId}`)
+        .limit(1)
+        .maybeSingle();
 
       if (error) throw error;
       setTenant(data);
@@ -238,8 +239,8 @@ export default function TenantDetailPage() {
   }
 
   // Monthly rent from active lease
-  const monthlyRent = activeLease?.monthly_rent || 0;
-  const securityDeposit = activeLease?.security_deposit || 0;
+  const monthlyRent = Number(activeLease?.monthly_rent || unit?.monthly_rent || 0);
+  const securityDeposit = Number(activeLease?.security_deposit || unit?.security_deposit || 0);
 
   return (
     <div className="animate-fade-in">
@@ -384,7 +385,7 @@ export default function TenantDetailPage() {
                   </div>
                   <div className="text-xs text-navy-500">
                     {pay.payment_method || "Manual"} · {new Date(pay.created_at).toLocaleDateString("en-IN")}
-                    {pay.reference_number && ` · Ref: ${pay.reference_number}`}
+                    
                   </div>
                 </div>
                 <div className="text-xs text-navy-400">
