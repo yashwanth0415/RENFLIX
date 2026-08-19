@@ -1458,9 +1458,9 @@ export default function UnitsPage() {
                   <th className="hidden md:table-cell text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Type
                   </th>
-                   {/*<th className="text-left px-2 sm:px-4 py-3 text-xs font-semibold text-navy-400 font-display uppercase tracking-wider ">
+                  <th className="hidden md:table-cell text-left px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Property
-                  </th>*/}
+                  </th>
 
                   <th className="w-[22%] text-right px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">
                     Rent
@@ -1533,22 +1533,14 @@ export default function UnitsPage() {
                           {/*<div className="text-[11px] text-navy-500 mt-1">{unit.tenant_count || 0} tenant{unit.tenant_count === 1 ? "" : "s"}</div>*/}
                         </td>
 
-                        {/* Property */}
-                        {/*<td className="px-2 sm:px-4 py-3 text-navy-300">
-                          {
-                            unit
-                              .property
-                              ?.name ||
-                            "—"
-                          }
-                        </td>*/}
-
                         {/* Type */}
-                        <td className="px-2 sm:px-4 py-3 text-navy-400 font-mono text-xs hidden md:table-cell">
-                          {
-                            unit.unit_type ||
-                            "—"
-                          }
+                        <td className="hidden md:table-cell px-2 sm:px-4 py-3 text-navy-400 font-mono text-xs">
+                          {unit.unit_type || "—"}
+                        </td>
+
+                        {/* Property: desktop only */}
+                        <td className="hidden md:table-cell px-2 sm:px-4 py-3 text-navy-300 truncate">
+                          {unit.property?.name || "—"}
                         </td>
 
                         {/* Rent */}

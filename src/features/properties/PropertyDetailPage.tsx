@@ -282,43 +282,39 @@ export default function PropertyDetailPage() {
     setLoading(true);
 
     try {
-      let query =
-        supabase
-          .from(
-            "properties"
-          )
-          .select("*")
-          .eq(
-            "property_display_id",
-            displayId
-          );
+      let query = supabase
+        .from("properties")
+        .select("*")
+        .eq("property_display_id", displayId)
+        .limit(1);
 
-      /*
-       * Respect the logged-in organization when available.
-       * This prevents accidentally loading a property belonging
-       * to another organization.
-       */
-      if (
-        profile?.organization_id
-      ) {
-        query =
-          query.eq(
-            "organization_id",
-            profile.organization_id
-          );
+      if (profile?.organization_id) {
+        query = query.eq("organization_id", profile.organization_id);
       }
 
-      const {
-        data,
-        error,
-      } =
-        await query.single();
+      const { data: displayData, error: displayError } = await query.maybeSingle();
 
-      if (error) {
-        throw error;
+      if (!displayError && displayData) {
+        setProperty(displayData);
+        return;
       }
 
-      setProperty(data);
+      // Notifications store entity UUIDs. Fall back to the real row ID.
+      let idQuery = supabase
+        .from("properties")
+        .select("*")
+        .eq("id", displayId)
+        .limit(1);
+
+      if (profile?.organization_id) {
+        idQuery = idQuery.eq("organization_id", profile.organization_id);
+      }
+
+      const { data: idData, error: idError } = await idQuery.maybeSingle();
+      if (idError) throw idError;
+      if (!idData) throw new Error("Property not found.");
+
+      setProperty(idData);
     } catch (err) {
       console.error(
         "Error fetching property:",

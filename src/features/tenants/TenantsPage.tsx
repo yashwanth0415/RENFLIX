@@ -1099,7 +1099,7 @@ export default function TenantsPage() {
                   }`}
                   onClick={() => selectionMode
                     ? toggleTenantSelection(tenant.id)
-                    : navigate(`/tenants/${tenant.tenant_display_id || tenant.id}`)
+                    : navigate(`/tenants/${tenant.id}`)
                   }
                 >
                   {selectionMode && (

@@ -11,6 +11,7 @@ import {
 
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
+import { disableDevicePush, enableDevicePush, getExistingPushSubscription, isPushSupported } from "../../lib/pushNotifications";
 
 import {
   Button,
@@ -69,9 +70,38 @@ export default function SettingsPage() {
 
   const navigate = useNavigate();
   const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("renflix-theme") as "dark" | "light") || "dark");
-  const [deviceNotifications, setDeviceNotifications] = useState(() => "Notification" in window && Notification.permission === "granted");
+  const [deviceNotifications, setDeviceNotifications] = useState(false);
+  const [notificationBusy, setNotificationBusy] = useState(false);
   useEffect(() => { document.documentElement.classList.toggle("theme-light", theme === "light"); localStorage.setItem("renflix-theme", theme); }, [theme]);
-  async function toggleDeviceNotifications() { if (!("Notification" in window)) return; const permission = await Notification.requestPermission(); setDeviceNotifications(permission === "granted"); }
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isPushSupported() || !("Notification" in window) || Notification.permission !== "granted") return;
+      try {
+        const subscription = await getExistingPushSubscription();
+        if (!cancelled) setDeviceNotifications(Boolean(subscription));
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  async function toggleDeviceNotifications() {
+    if (!user?.id || notificationBusy) return;
+    setNotificationBusy(true);
+    try {
+      if (deviceNotifications) {
+        await disableDevicePush(user.id);
+        setDeviceNotifications(false);
+      } else {
+        await enableDevicePush(user.id);
+        setDeviceNotifications(true);
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to update device notifications.");
+    } finally {
+      setNotificationBusy(false);
+    }
+  }
 
   const [tab, setTab] =
     useState<SettingsTab>(
@@ -127,6 +157,7 @@ export default function SettingsPage() {
 
   const [showRoleModal, setShowRoleModal] =
     useState(false);
+
 
   const [selectedRole, setSelectedRole] =
     useState<UserRole>(
@@ -1172,23 +1203,31 @@ export default function SettingsPage() {
           <Card>
             <div className="flex items-center justify-between gap-4 py-1">
               <div><h3 className="font-display font-bold text-white">Device notifications</h3><p className="text-xs text-navy-500 mt-1">Show RENFLIX alerts as device notifications.</p></div>
-              <Button size="sm" variant={deviceNotifications ? "secondary" : "primary"} onClick={toggleDeviceNotifications}>{deviceNotifications ? "Enabled" : "Enable"}</Button>
+              <Button size="sm" variant={deviceNotifications ? "secondary" : "primary"} onClick={toggleDeviceNotifications} loading={notificationBusy}>{deviceNotifications ? "Enabled" : "Enable"}</Button>
             </div>
           </Card>
           <Card>
             <div className="flex items-center justify-between gap-4 py-1">
-              <div><h3 className="font-display font-bold text-white">Appearance</h3><p className="text-xs text-navy-500 mt-1">Choose the RENFLIX theme.</p></div>
+              <div><div className="flex items-center gap-2"><h3 className="font-display font-bold text-white">Appearance</h3><span className="inline-flex items-center rounded-full bg-violet-500/15 border border-violet-400/25 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300">Beta</span></div><p className="text-xs text-navy-500 mt-1">Choose the RENFLIX theme.</p></div>
               <div className="flex gap-2"><Button size="sm" variant={theme === "light" ? "primary" : "secondary"} onClick={() => setTheme("light")}>Light</Button><Button size="sm" variant={theme === "dark" ? "primary" : "secondary"} onClick={() => setTheme("dark")}>Dark</Button></div>
             </div>
           </Card>
           <Card className="border-red-500/20">
             <div className="flex items-center justify-between gap-4 py-1">
               {/*<div><h3 className="font-display font-bold text-white">Sign out</h3><p className="text-xs text-navy-500 mt-1">Sign out of this RENFLIX account on this device.</p></div>*/}
-              <Button variant="ghost" type="button" className="text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={async () => { if (window.confirm("Are you sure you want to sign out?")) { await supabase.auth.signOut(); navigate("/login", { replace: true }); } }}><LogOut size={15} /> Sign out</Button>
+              <Button
+                variant="ghost"
+                type="button"
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                onClick={() => window.dispatchEvent(new CustomEvent("renflix:request-signout"))}
+              >
+                <LogOut size={15} /> Sign out
+              </Button>
             </div>
           </Card>
         </div>
       )}
+
 
       {/* ====================================================== */}
       {/* TOAST                                                   */}

@@ -247,15 +247,37 @@ export const FILTER_OPTIONS = [
 // Notification navigation
 // ------------------------------------------------------------
 export function getNotificationRoute(notification: Notification, role?: string) {
-  const type = notification.entity_type || notification.type;
-  const id = notification.entity_id || (notification.metadata?.payment_id as string | undefined);
-  if (type === "payment" || notification.type.includes("payment")) return "/payments";
-  if (type === "maintenance" || notification.type.includes("maintenance")) return "/maintenance";
-  if (type === "announcement" || notification.type.includes("announcement")) return role === "TENANT" ? "/announcements" : "/community";
-  if (type === "tenant" || notification.type.includes("tenant")) return id ? `/tenants/${id}` : "/tenants";
-  if (type === "property" || notification.type.includes("property")) return id ? `/properties/${id}` : "/properties";
-  if (type === "lease" || notification.type.includes("lease")) return "/leases";
-  return "/dashboard";
+  const metadata = notification.metadata || {};
+  const entityId = notification.entity_id;
+  const propertyDisplayId = typeof metadata.property_display_id === "string" ? metadata.property_display_id : null;
+
+  switch (notification.type) {
+    case "property_created":
+      return propertyDisplayId
+        ? `/properties/${propertyDisplayId}`
+        : "/properties";
+    case "tenant_added":
+      return entityId
+        ? `/tenants/${entityId}`
+        : "/tenants";
+    case "payment_received":
+    case "payment_review":
+      return "/payments";
+    case "maintenance_created":
+      return "/maintenance";
+    case "announcement":
+      return role === "TENANT" ? "/announcements" : "/community";
+    case "lease_created":
+      return "/leases";
+    default:
+      if (notification.entity_type === "tenant") return entityId ? `/tenants/${entityId}` : "/tenants";
+      if (notification.entity_type === "property") return propertyDisplayId ? `/properties/${propertyDisplayId}` : "/properties";
+      if (notification.entity_type === "payment") return "/payments";
+      if (notification.entity_type === "maintenance") return "/maintenance";
+      if (notification.entity_type === "announcement") return role === "TENANT" ? "/announcements" : "/community";
+      if (notification.entity_type === "lease") return "/leases";
+      return "/dashboard";
+  }
 }
 
 // ------------------------------------------------------------
@@ -509,8 +531,21 @@ export default function AppShell() {
               (previous) =>
                 previous + 1
             );
-            if ("Notification" in window && Notification.permission === "granted") {
-              try { new Notification(`RENFLIX · ${newNotif.title}`, { body: newNotif.message, icon: "/favicon.ico", tag: newNotif.id }); } catch {}
+            // Background/device delivery is handled by the Service Worker + Web Push.
+            // Keep a foreground fallback only when the user has not created a Push subscription.
+            if ("Notification" in window && Notification.permission === "granted" && "serviceWorker" in navigator) {
+              navigator.serviceWorker.ready.then(async (registration) => {
+                const subscription = await registration.pushManager.getSubscription();
+                if (!subscription) {
+                  try {
+                    await registration.showNotification(`RENFLIX · ${newNotif.title}`, {
+                      body: newNotif.message || "You have a new notification.",
+                      icon: "/icons/icon-192.png",
+                      tag: newNotif.id,
+                    });
+                  } catch {}
+                }
+              }).catch(() => {});
             }
           }
         )

@@ -171,11 +171,19 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5 items-end">
-        <div className="relative w-full"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500" /><input className="w-full bg-navy-800 border border-navy-700 rounded-lg pl-9 pr-4 py-2.5 text-sm text-navy-100 placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-blue-electric" placeholder="Search tenant / reference..." value={search} onChange={e=>setSearch(e.target.value)} /></div>
-        <Select label="Property" value={filterProperty} onChange={e=>{setFilterProperty(e.target.value);setFilterUnit("")}} options={[{value:"",label:"All properties"},...properties.map(p=>({value:p.id,label:p.name}))]} />
-        <Select label="Unit" value={filterUnit} onChange={e=>setFilterUnit(e.target.value)} options={[{value:"",label:"All units"},...units.filter(u=>!filterProperty || u.property_id===filterProperty).map(u=>({value:u.id,label:u.unit_number}))]} />
-        <Select label="Payment Status" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} options={[{value:"",label:"All payments"},{value:"PENDING",label:"Pending"},{value:"DUE",label:"Due"},{value:"UNDER_REVIEW",label:"Under Review"},{value:"PAID",label:"Paid"},{value:"PARTIALLY_PAID",label:"Partially Paid"},{value:"OVERDUE",label:"Overdue"}]} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5 items-end">
+        <div className="relative w-full col-span-2 lg:col-span-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-500 pointer-events-none" />
+          <input
+            className="w-full h-10 bg-navy-800 border border-navy-700 rounded-lg pl-9 pr-3 py-2.5 text-sm leading-5 text-navy-100 placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-blue-electric focus:border-transparent"
+            placeholder="Search tenant / reference..."
+            value={search}
+            onChange={e=>setSearch(e.target.value)}
+          />
+        </div>
+        <Select label="Property" value={filterProperty} onChange={e=>{setFilterProperty(e.target.value);setFilterUnit("")}} options={[{value:"",label:"All properties"},...properties.map(p=>({value:p.id,label:p.name}))]} className="min-w-0 w-full" />
+        <Select label="Unit" value={filterUnit} onChange={e=>setFilterUnit(e.target.value)} options={[{value:"",label:"All units"},...units.filter(u=>!filterProperty || u.property_id===filterProperty).map(u=>({value:u.id,label:u.unit_number}))]} className="min-w-0 w-full" />
+        <div className="col-span-2 lg:col-span-1 min-w-0"><Select label="Payment Status" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} options={[{value:"",label:"All payments"},{value:"PENDING",label:"Pending"},{value:"DUE",label:"Due"},{value:"UNDER_REVIEW",label:"Under Review"},{value:"PAID",label:"Paid"},{value:"PARTIALLY_PAID",label:"Partially Paid"},{value:"OVERDUE",label:"Overdue"}]} className="w-full" /></div>
       </div>
 
       {loading ? (
@@ -191,14 +199,14 @@ export default function PaymentsPage() {
         </Card>
       ) : (
         <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
-          <table className="w-full table-fixed text-[10px] sm:text-sm">
+          <table className="w-full table-fixed text-[11px] sm:text-sm">
             <thead>
               <tr className="border-b border-navy-700">
-                <th className="w-[18%] text-left px-2 sm:px-4 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Payment ID</th>
-                <th className="w-[28%] text-left px-2 sm:px-4 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Tenant</th>
-                <th className="w-[19%] text-right px-2 sm:px-4 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Amount</th>
-                <th className="w-[17%] text-center px-1 sm:px-4 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Date</th>
-                <th className="w-[18%] text-center px-1 sm:px-4 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Status</th>
+                <th className="hidden md:table-cell md:w-[18%] text-left px-2 sm:px-4 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Payment ID</th>
+                <th className="w-[34%] md:w-[28%] text-left px-2 sm:px-3 py-3 text-[10px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Tenant</th>
+                <th className="w-[24%] md:w-[19%] text-right px-2 sm:px-3 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Amount</th>
+                <th className="w-[21%] md:w-[17%] text-center px-1 sm:px-3 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Date</th>
+                <th className="w-[21%] md:w-[18%] text-center px-1 sm:px-3 py-3 text-[9px] sm:text-xs font-semibold text-navy-400 font-display uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -206,16 +214,16 @@ export default function PaymentsPage() {
                 const tenant = tenants.find((t) => t.id === pay.tenant_id);
                 return (
                   <tr key={pay.id} className="border-b border-navy-700/50 hover:bg-navy-700/30 transition-colors">
-                    <td className="px-2 sm:px-4 py-3 font-mono text-blue-300 font-semibold truncate">#{pay.payment_display_id || "—"}</td>
-                    <td className="px-2 sm:px-4 py-3 min-w-0">
+                    <td className="hidden md:table-cell px-2 sm:px-4 py-3 font-mono text-blue-300 font-semibold truncate">#{pay.payment_display_id || "—"}</td>
+                    <td className="px-2 sm:px-3 py-3 min-w-0">
                       <button type="button" onClick={() => setReceiptPayment(pay)} className="block text-left max-w-full">
-                        <div className="font-semibold text-white text-[10px] sm:text-sm truncate">{tenant?.full_name || "Unknown"}</div>
+                        <div className="font-semibold text-white text-[12px] sm:text-sm truncate">{tenant?.full_name || "Unknown"}</div>
                         {pay.reference_number && <div className="text-[9px] sm:text-xs text-navy-500 font-mono truncate">{pay.reference_number}</div>}
                       </button>
                     </td>
-                    <td className="px-2 sm:px-4 py-3 text-right font-mono font-bold text-emerald-400 whitespace-nowrap"><button type="button" onClick={() => setReceiptPayment(pay)} className="hover:underline">{formatINR(pay.amount)}</button></td>
-                    <td className="px-1 sm:px-4 py-3 text-center text-navy-400 whitespace-nowrap">{pay.paid_date ? new Date(pay.paid_date).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit" }) : "—"}</td>
-                    <td className="px-1 sm:px-4 py-3 text-center"><StatusBadge status={pay.status} /></td>
+                    <td className="px-2 sm:px-3 py-3 text-right font-mono font-bold text-emerald-400 whitespace-nowrap"><button type="button" onClick={() => setReceiptPayment(pay)} className="hover:underline">{formatINR(pay.amount)}</button></td>
+                    <td className="px-1 sm:px-2 py-3 text-center text-navy-400 whitespace-nowrap">{pay.paid_date ? new Date(pay.paid_date).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit" }) : "—"}</td>
+                    <td className="px-1 sm:px-2 py-3 text-center"><StatusBadge status={pay.status} /></td>
                   </tr>
                 );
               })}

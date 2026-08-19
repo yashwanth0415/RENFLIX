@@ -4,20 +4,10 @@ import { Bell, Check, X, Filter, Building2, Users, CreditCard, Wrench, FileText 
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
 import { Button, Card, PageHeader, EmptyState, ScrollArea, Select } from "../../components/ui";
-import { formatTime, getNotifIcon, getNotifIconColor, getNotificationDisplay, FILTER_OPTIONS } from "../../components/layout/AppShell";
+import { formatTime, getNotifIcon, getNotifIconColor, getNotificationDisplay, getNotificationRoute, FILTER_OPTIONS } from "../../components/layout/AppShell";
 import type { Notification } from "../../components/layout/AppShell";
 
-function notificationRoute(n: Notification, role?: string) {
-  const type = n.entity_type || n.type;
-  const id = n.entity_id || (n.metadata?.payment_id as string | undefined);
-  if (type === "payment" || n.type?.includes("payment")) return "/payments";
-  if (type === "maintenance" || n.type?.includes("maintenance")) return "/maintenance";
-  if (type === "announcement" || n.type?.includes("announcement")) return role === "TENANT" ? "/announcements" : "/community";
-  if (type === "tenant" || n.type?.includes("tenant")) return id ? `/tenants/${id}` : "/tenants";
-  if (type === "property" || n.type?.includes("property")) return id ? `/properties/${id}` : "/properties";
-  if (type === "lease" || n.type?.includes("lease")) return "/leases";
-  return "/dashboard";
-}
+
 
 export default function NotificationsPage() {
   const { user, profile } = useAuth();
@@ -126,7 +116,7 @@ export default function NotificationsPage() {
               <button
                 type="button"
                 key={notif.id}
-                onClick={async () => { await markAsRead([notif.id]); navigate(notificationRoute(notif, profile?.role)); }}
+                onClick={async () => { await markAsRead([notif.id]); navigate(getNotificationRoute(notif, profile?.role)); }}
                 className={`w-full text-left p-4 hover:bg-navy-700/30 transition-colors ${!notif.read ? 'bg-navy-700/30' : ''}`}
               >
                 <div className="flex items-start gap-3">

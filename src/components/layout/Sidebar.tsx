@@ -28,7 +28,7 @@ const MAIN_OWNER: NavItem[] = [
 
 const MORE_ITEMS: NavItem[] = [
   // { to: "/messages", icon: <MessageSquare size={18} />, label: "Messages", beta: true },
-  { to: "/leases", icon: <FileText size={18} />, label: "Leases", beta: true },
+  // { to: "/leases", icon: <FileText size={18} />, label: "Leases", beta: true },
   { to: "/analytics", icon: <BarChart3 size={18} />, label: "Analytics", beta: true },
   { to: "/intelligence", icon: <Cpu size={18} />, label: "Intelligence", beta: true },
 ];
@@ -104,7 +104,12 @@ export default function Sidebar({ profile, mobile, onClose }: SidebarProps) {
       </div>
 
       {profile && (
-        <div className="px-4 py-3 border-b border-navy-800">
+        <button
+          type="button"
+          onClick={() => { navigate("/settings"); onClose?.(); }}
+          className="w-full text-left px-4 py-3 border-b border-navy-800 hover:bg-navy-800/70 transition-colors"
+          aria-label="Open My Profile in Settings"
+        >
           <div className="flex items-start gap-2.5">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-bold text-white">{(profile.full_name || "U")[0].toUpperCase()}</span>
@@ -114,7 +119,7 @@ export default function Sidebar({ profile, mobile, onClose }: SidebarProps) {
               <div className="text-[10px] text-blue-400 font-mono uppercase">{profile.role}</div>
             </div>
           </div>
-        </div>
+        </button>
       )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-0.5">

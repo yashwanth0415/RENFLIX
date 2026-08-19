@@ -1,6 +1,7 @@
 // src/app/routes.ts
 import { createBrowserRouter } from "react-router";
 import AppShell from "../components/layout/AppShell";
+import RootLayout from "./RootLayout";
 
 // Public pages
 import LandingPage from "../features/landing/LandingPage";
@@ -59,8 +60,11 @@ export const router = createBrowserRouter([
   // ─── Authenticated routes ──────────────────────────────
   // Use Component instead of element to avoid JSX in .ts
   {
-    Component: AppShell,   // <-- no angle brackets
+    Component: RootLayout,
     children: [
+      {
+        Component: AppShell,
+        children: [
       { path: "dashboard", Component: RoleDashboardPage },
       { path: "properties", Component: PropertiesPage },
       { path: "properties/:propertyDisplayId", Component: PropertyDetailPage },
@@ -76,7 +80,9 @@ export const router = createBrowserRouter([
       { path: "community", Component: CommunityPage },
       { path: "announcements", Component: AnnouncementsPage },
       { path: "intelligence", Component: IntelligencePage },
-      { path: "settings", Component: SettingsPage },
+          { path: "settings", Component: SettingsPage },
+        ],
+      },
     ],
   },
 ]);

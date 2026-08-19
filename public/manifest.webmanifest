@@ -1,6 +1,7 @@
 {
   "name": "RENFLIX",
   "short_name": "RENFLIX",
+  "id": "/",
   "description": "Every Property. One Powerful Platform.",
   "start_url": "/",
   "scope": "/",
