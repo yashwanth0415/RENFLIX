@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appConfirm } from "../../lib/appConfirm";
 import { useNavigate } from "react-router";
 import { Building2, Plus, Search, MapPin, Grid, List } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -135,7 +136,7 @@ export default function PropertiesPage() {
   }
 
   async function archiveProperty(id: string) {
-    if (!confirm("Archive this property?")) return;
+    if (!await appConfirm("Archive this property?")) return;
     await supabase.from("properties").update({ status: "ARCHIVED", archived_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
     setToast({ msg: "Property archived", type: "success" });
     fetchProperties();

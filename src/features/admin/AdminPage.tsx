@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { appConfirm } from "../../lib/appConfirm";
 import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard,
@@ -876,7 +877,7 @@ export default function AdminPage() {
       setToast({ msg: "Select at least one entry.", type: "error" });
       return;
     }
-    if (!confirm(`Delete ${selectedIds.length} selected ${tableConfig.label.toLowerCase()}? This permanently removes the database records.`)) return;
+    if (!(await appConfirm(`Delete ${selectedIds.length} selected ${tableConfig.label.toLowerCase()}? This permanently removes the database records.`))) return;
 
     try {
       const { error } = await supabase.rpc("admin_delete_records", {

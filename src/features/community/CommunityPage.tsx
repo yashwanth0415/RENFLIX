@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appConfirm } from "../../lib/appConfirm";
 import { Globe, Plus, Megaphone, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -78,7 +79,7 @@ export default function CommunityPage() {
       setToast({ msg: "Select at least one announcement.", type: "error" });
       return;
     }
-    if (!confirm(`Archive ${selectedIds.length} selected announcement(s)? They will remain in Settings → Archived.`)) return;
+    if (!(await appConfirm(`Archive ${selectedIds.length} selected announcement(s)? They will remain in Settings → Archived.`))) return;
     const { error } = await supabase.from("community_announcements").update({ archived_at: new Date().toISOString() }).in("id", selectedIds);
     if (error) {
       setToast({ msg: error.message, type: "error" });
@@ -96,11 +97,11 @@ export default function CommunityPage() {
   return <div className="animate-fade-in">
     <PageHeader title="Community" subtitle="Announcements and community management" action={
       <div className="flex items-center gap-2">
-        {selectionMode ? (
+        {/*{selectionMode ? (
           <Button variant="danger" size="sm" onClick={deleteSelected} disabled={!selectedIds.length}><Trash2 size={15}/> Archive{selectedIds.length ? ` (${selectedIds.length})` : ""}</Button>
         ) : (
           <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>Select</Button>
-        )}
+        )}*/}
         <Button size="sm" onClick={() => setShowModal(true)}><Plus size={16}/> Announce</Button>
       </div>
     } />

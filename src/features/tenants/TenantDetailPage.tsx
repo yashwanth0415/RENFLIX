@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appConfirm } from "../../lib/appConfirm";
 import { useParams, useNavigate } from "react-router";
 import {
   Users,
@@ -159,7 +160,7 @@ export default function TenantDetailPage() {
 
   async function archiveTenant() {
     if (!tenant) return;
-    if (!confirm("Archive this tenant? This will remove them from active listings.")) return;
+    if (!(await appConfirm("Archive this tenant? This will remove them from active listings."))) return;
 
     try {
       const { error } = await supabase

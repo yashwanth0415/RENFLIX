@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { appConfirm } from "../../lib/appConfirm";
 import { MessageSquare, Send, ArrowLeft, UserRound } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -201,7 +202,7 @@ export default function MessagesPage() {
       setToast({ msg: "Select at least one conversation.", type: "error" });
       return;
     }
-    if (!confirm(`Archive ${selectedConversationIds.length} selected conversation(s)? They will remain in Settings → Archived.`)) return;
+    if (!(await appConfirm(`Archive ${selectedConversationIds.length} selected conversation(s)? They will remain in Settings → Archived.`))) return;
     const { error } = await supabase.from("conversations").update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() }).in("id", selectedConversationIds);
     if (error) {
       setToast({ msg: error.message, type: "error" });

@@ -545,3 +545,8 @@ button, a, select, input, textarea { -webkit-tap-highlight-color: transparent; }
     z-index: 20;
   }
 }
+
+/* Payment date inputs stay inside their form cell on desktop/mobile Safari. */
+.payment-date-input { min-width: 0; width: 100%; box-sizing: border-box; }
+.payment-date-input::-webkit-date-and-time-value { text-align: left; }
+.payment-date-input::-webkit-calendar-picker-indicator { margin-left: 0; }

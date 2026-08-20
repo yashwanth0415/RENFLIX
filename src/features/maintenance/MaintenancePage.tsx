@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appConfirm } from "../../lib/appConfirm";
 import { Wrench, Plus, Search } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
@@ -160,7 +161,7 @@ export default function MaintenancePage() {
       setToast({ msg: "Select at least one maintenance request.", type: "error" });
       return;
     }
-    if (!confirm(`Archive ${selectedIds.length} selected maintenance request(s)? They will remain in Settings → Archived.`)) return;
+    if (!(await appConfirm(`Archive ${selectedIds.length} selected maintenance request(s)? They will remain in Settings → Archived.`))) return;
     const { error } = await supabase.from("maintenance_requests").update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() }).in("id", selectedIds);
     if (error) {
       setToast({ msg: error.message, type: "error" });

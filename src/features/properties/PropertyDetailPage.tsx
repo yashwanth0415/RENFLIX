@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appConfirm } from "../../lib/appConfirm";
 import {
   useParams,
   useNavigate,
@@ -849,9 +850,9 @@ export default function PropertyDetailPage() {
     }
 
     if (
-      !confirm(
+      !(await appConfirm(
         "Archive this property? This will remove it from active listings."
-      )
+      ))
     ) {
       return;
     }

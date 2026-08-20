@@ -1,3 +1,4 @@
+import { appConfirm } from "../../lib/appConfirm";
 import { useEffect, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { DoorOpen, Plus, Search } from "lucide-react";
@@ -1128,15 +1129,11 @@ export default function UnitsPage() {
       return;
     }
 
-    const confirmed =
-      window.confirm(
-        `Archive ${ids.length} selected unit${
-          ids.length >
-          1
-            ? "s"
-            : ""
-        }?\n\nThey will remain available in Settings → Archived.`
-      );
+    const confirmed = await appConfirm(
+      `Archive ${ids.length} selected unit${
+        ids.length > 1 ? "s" : ""
+      }?\n\nThey will remain available in Settings → Archived.`
+    );
 
     if (!confirmed) {
       return;

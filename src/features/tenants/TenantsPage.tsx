@@ -1,3 +1,4 @@
+import { appConfirm } from "../../lib/appConfirm";
 import {
   useEffect,
   useMemo,
@@ -845,7 +846,7 @@ export default function TenantsPage() {
 
   async function deleteSelectedTenants() {
     if (!selectedTenantIds.length) return;
-    const confirmed = window.confirm(
+    const confirmed = await appConfirm(
       `Archive ${selectedTenantIds.length} selected tenant${selectedTenantIds.length > 1 ? "s" : ""}? They will remain in Settings → Archived.`
     );
     if (!confirmed) return;
