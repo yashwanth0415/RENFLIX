@@ -37,7 +37,7 @@ const TENANT_ITEMS: NavItem[] = [
   { to: "/dashboard", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
   { to: "/payments", icon: <CreditCard size={18} />, label: "Payments" },
   { to: "/maintenance", icon: <Wrench size={18} />, label: "Maintenance" },
-  { to: "/messages", icon: <MessageSquare size={18} />, label: "Messages" },
+  // { to: "/messages", icon: <MessageSquare size={18} />, label: "Messages" },
   { to: "/announcements", icon: <Megaphone size={18} />, label: "Announcements" },
 ];
 
