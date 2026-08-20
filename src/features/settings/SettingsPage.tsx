@@ -191,6 +191,7 @@ export default function SettingsPage() {
   const [orgForm, setOrgForm] =
     useState({
       name: "",
+      owner_upi_id: "",
     });
 
   // ------------------------------------------------------------
@@ -276,6 +277,7 @@ export default function SettingsPage() {
     if (!profile?.organization_id) {
       setOrgForm({
         name: "",
+        owner_upi_id: "",
       });
 
       return;
@@ -285,7 +287,7 @@ export default function SettingsPage() {
 
     supabase
       .from("organizations")
-      .select("name")
+      .select("name, owner_upi_id")
       .eq(
         "id",
         profile.organization_id
@@ -310,9 +312,8 @@ export default function SettingsPage() {
           }
 
           setOrgForm({
-            name:
-              data?.name ||
-              "",
+            name: data?.name || "",
+            owner_upi_id: data?.owner_upi_id || "",
           });
         }
       );
@@ -613,13 +614,14 @@ export default function SettingsPage() {
         );
       }
 
+      const organizationUpdate: { name: string; owner_upi_id?: string | null } = { name };
+      if (profile?.role === "OWNER") organizationUpdate.owner_upi_id = orgForm.owner_upi_id.trim() || null;
+
       const {
         error,
       } = await supabase
         .from("organizations")
-        .update({
-          name,
-        })
+        .update(organizationUpdate)
         .eq(
           "id",
           profile.organization_id
@@ -806,15 +808,33 @@ export default function SettingsPage() {
   // ------------------------------------------------------------
   // Tabs
   // ------------------------------------------------------------
+const tabs: {
+  id: SettingsTab;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    id: "profile",
+    label: "Profile",
+    icon: <User size={15} />,
+  },
 
-  const tabs: {
-    id: SettingsTab;
-    label: string;
-    icon: React.ReactNode;
-  }[] = [
-    { id: "profile", label: "Profile", icon: <User size={15} /> },
-    { id: "security", label: "Security", icon: <Shield size={15} /> },
-  ];
+  ...(profile?.role === "OWNER"
+    ? [
+        {
+          id: "org" as SettingsTab,
+          label: "Organization",
+          icon: <Building2 size={15} />,
+        },
+      ]
+    : []),
+
+  {
+    id: "security",
+    label: "Security",
+    icon: <Shield size={15} />,
+  },
+];
 
   return (
     <div className="animate-fade-in max-w-2xl">
@@ -1172,6 +1192,18 @@ export default function SettingsPage() {
                   })
                 }
               />
+
+              {profile?.role === "OWNER" && (
+                <div className="flex flex-col gap-1">
+                  <Input
+                    label="Owner UPI ID"
+                    value={orgForm.owner_upi_id}
+                    onChange={(e) => setOrgForm((current) => ({ ...current, owner_upi_id: e.target.value }))}
+                    placeholder="yourname@upi"
+                  />
+                  <p className="text-[11px] text-navy-500">Tenants will pay only to this UPI ID. Use the exact UPI ID registered with your bank.</p>
+                </div>
+              )}
 
               <Button
                 type="submit"

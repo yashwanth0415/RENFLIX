@@ -46,6 +46,7 @@ export interface Organization {
   id: string;
   name: string;
   owner_id: string;
+  owner_upi_id?: string | null;
   created_at: string;
 }
 

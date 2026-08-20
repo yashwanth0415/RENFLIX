@@ -20,7 +20,7 @@ import TenantDetailPage from "../features/tenants/TenantDetailPage";
 import LeasesPage from "../features/leases/LeasesPage";
 import RolePaymentsPage from "../features/payments/RolePaymentsPage";
 import MaintenancePage from "../features/maintenance/MaintenancePage";
-import MessagesPage from "../features/messaging/MessagesPage";
+import RoleMessagesPage from "../features/messaging/RoleMessagesPage";
 import AnalyticsPage from "../features/analytics/AnalyticsPage";
 import CommunityPage from "../features/community/CommunityPage";
 import AnnouncementsPage from "../features/community/AnnouncementsPage";
@@ -76,7 +76,7 @@ export const router = createBrowserRouter([
       { path: "leases", Component: LeasesPage },
       { path: "payments", Component: RolePaymentsPage },
       { path: "maintenance", Component: MaintenancePage },
-      { path: "messages", Component: MessagesPage },
+      { path: "messages", Component: RoleMessagesPage },
       { path: "notifications", Component: NotificationsPage },
       { path: "analytics", Component: AnalyticsPage },
       { path: "community", Component: CommunityPage },
