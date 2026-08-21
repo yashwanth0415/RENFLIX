@@ -749,7 +749,7 @@ export default function LandingPage() {
                         No hosted properties found
                       </h3>
                       <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-slate-600">
-                        Try the property name or the full 164xx property ID. Only properties currently hosted publicly appear here.
+                        Try the property name or the property ID. Only properties currently hosted publicly appear here.
                       </p>
                     </div>
                   ) : (
