@@ -5,7 +5,8 @@ export type UserRole =
   | "HOSTEL_MANAGER"
   | "TECHNICIAN"
   | "COMMUNITY_MANAGER"
-  | "ADMIN";
+  | "ADMIN"
+  | "CLIENT";
 
 export interface Profile {
   id: string;

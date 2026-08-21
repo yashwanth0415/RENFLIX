@@ -22,8 +22,10 @@ import {
   Server,
   Database,
   Award,
+  Search,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { supabase } from "../../lib/supabase";
 
 const logoSrc = "/logo.png";
 
@@ -111,6 +113,10 @@ export default function LandingPage() {
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [propertySearch, setPropertySearch] = useState("");
+  const [propertyResults, setPropertyResults] = useState<any[]>([]);
+  const [propertySearching, setPropertySearching] = useState(false);
+  const [propertyOverlay, setPropertyOverlay] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -121,6 +127,26 @@ export default function LandingPage() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  useEffect(() => {
+    if (!propertyOverlay) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPropertyOverlay(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [propertyOverlay]);
+
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -129,6 +155,47 @@ export default function LandingPage() {
       console.log("PWA installed");
     }
     setDeferredPrompt(null);
+  };
+
+
+  const runPropertySearch = async (searchOverride?: string) => {
+    const query = (searchOverride ?? propertySearch).trim();
+
+    if (!query) {
+      setPropertyResults([]);
+      return;
+    }
+
+    setPropertySearching(true);
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "search_public_properties",
+        { p_query: query }
+      );
+
+      if (error) {
+        console.error("Hosted property search failed:", error);
+        setPropertyResults([]);
+        return;
+      }
+
+      setPropertyResults(data || []);
+    } catch (error) {
+      console.error("Hosted property search failed:", error);
+      setPropertyResults([]);
+    } finally {
+      setPropertySearching(false);
+    }
+  };
+
+  const openHostedProperties = () => {
+    setPropertyOverlay(true);
+    setMobileMenu(false);
+  };
+
+  const closeHostedProperties = () => {
+    setPropertyOverlay(false);
   };
 
   const scrollTo = (id: string) => {
@@ -157,7 +224,7 @@ export default function LandingPage() {
       </div>
 
       {/* Header */}
-      <header className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-5xl animate-fade-in-slow">
+      <header className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-7xl animate-fade-in-slow">
         <div
           className={`backdrop-blur-xl bg-[#020617]/70 border border-white/[0.08] rounded-[30px] shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.05)] ${
             mobileMenu ? "rounded-b-none" : ""
@@ -197,9 +264,16 @@ export default function LandingPage() {
               <button onClick={() => scrollTo("security")} className="px-5 py-2.5 rounded-full text-sm text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all">Security</button>
             </div>
 
-            <div className="hidden md:flex items-center gap-3">
-              <Link to="/login" className="px-5 py-2.5 rounded-full text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/[0.05] transition-all">Sign in</Link>
-              <Link to="/signup" className="group flex items-center gap-2 px-6 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-[0_0_25px_rgba(59,130,246,0.4)] hover:shadow-[0_0_35px_rgba(59,130,246,0.6)] transition-all">
+            <div className="hidden md:flex items-center gap-2">
+              <button
+                onClick={openHostedProperties}
+                className="group flex items-center gap-2 px-4 py-2.5 rounded-full border border-blue-400/20 bg-blue-500/[0.08] text-blue-200 text-sm font-semibold hover:bg-blue-500/[0.15] hover:border-blue-400/30 transition-all"
+              >
+                <Search size={15} />
+                Hosted Properties
+              </button>
+              <Link to="/login" className="px-4 py-2.5 rounded-full text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/[0.05] transition-all">Sign in</Link>
+              <Link to="/signup" className="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-[0_0_25px_rgba(59,130,246,0.4)] hover:shadow-[0_0_35px_rgba(59,130,246,0.6)] transition-all">
                 Get started <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
@@ -244,6 +318,14 @@ export default function LandingPage() {
           {label}
         </button>
       ))}
+
+      <button
+        onClick={openHostedProperties}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/[0.08] border border-blue-400/15 text-blue-200 text-sm font-semibold text-left"
+      >
+        <Search size={15} />
+        Hosted Properties
+      </button>
 
       <div className="h-px bg-white/[0.06] my-2" />
 
@@ -529,6 +611,166 @@ export default function LandingPage() {
           </RevealContainer>
         </section>
       </main>
+
+      {propertyOverlay && (
+        <div
+          className="fixed inset-0 z-[200] bg-[#020617]/90 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="hosted-properties-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeHostedProperties();
+            }
+          }}
+        >
+          <div className="min-h-[100dvh] overflow-y-auto px-4 py-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-8">
+            <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-4xl items-start justify-center sm:items-center">
+              <div className="w-full overflow-hidden rounded-[28px] border border-white/[0.10] bg-[#07101f] shadow-[0_30px_100px_rgba(0,0,0,0.55)]">
+                <div className="sticky top-0 z-10 border-b border-white/[0.08] bg-[#07101f]/95 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
+                    <div>
+                      <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-blue-300">
+                        <Building2 size={13} />
+                        RENFLIX marketplace
+                      </div>
+                      <h2 id="hosted-properties-title" className="mt-1 font-display text-xl font-extrabold text-white sm:text-2xl">
+                        Hosted Properties
+                      </h2>
+                      {/*<p className="mt-1 text-xs text-slate-500 sm:text-sm">
+                        Search properties published by RENFLIX clients.
+                      </p>*/}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={closeHostedProperties}
+                      aria-label="Close hosted properties"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+                    >
+                      <X size={19} />
+                    </button>
+                  </div>
+
+                  <div className="px-5 pb-5 sm:px-6">
+                    <div className="relative">
+                      <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input
+                        autoFocus
+                        value={propertySearch}
+                        onChange={(event) => {
+                          setPropertySearch(event.target.value);
+                          if (!event.target.value.trim()) {
+                            setPropertyResults([]);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            runPropertySearch();
+                          }
+                        }}
+                        placeholder="Search by property name or ID"
+                        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] py-4 pl-11 pr-28 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-400/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => runPropertySearch()}
+                        disabled={propertySearching}
+                        className="absolute right-1.5 top-1.5 bottom-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {propertySearching ? "Searching…" : "Search"}
+                      </button>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                      <span className="rounded-full border border-white/7 bg-white/[0.025] px-2.5 py-1">Name</span>
+                      <span className="rounded-full border border-white/7 bg-white/[0.025] px-2.5 py-1">Property ID</span>
+                      <span className="ml-auto">Press Enter to search</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-5 py-5 sm:px-6 sm:py-6">
+                  {propertySearching ? (
+                    <div className="rounded-2xl border border-white/7 bg-white/[0.02] px-5 py-12 text-center">
+                      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-blue-400/20 border-t-blue-400" />
+                      <p className="mt-4 text-sm text-slate-500">Searching hosted properties…</p>
+                    </div>
+                  ) : propertyResults.length > 0 ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {propertyResults.slice(0, 12).map((result) => (
+                        <button
+                          type="button"
+                          key={result.property_display_id}
+                          onClick={() => navigate(`/${result.property_display_id}`)}
+                          className="group flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 text-left transition hover:border-blue-400/25 hover:bg-blue-500/[0.06]"
+                        >
+                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/7 bg-white/[0.04]">
+                            {result.image_url ? (
+                              <img
+                                src={result.image_url}
+                                alt={result.name || "Property"}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <Building2 size={24} className="text-slate-600" />
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-semibold text-white group-hover:text-blue-200">
+                              {result.name}
+                            </div>
+                            <div className="mt-1 text-[11px] text-slate-500">
+                              {result.city || "Location not set"}
+                              {result.state ? `, ${result.state}` : ""}
+                            </div>
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="rounded-md bg-blue-500/10 px-2 py-1 font-mono text-[10px] text-blue-300">
+                                {result.property_display_id}
+                              </span>
+                              {result.property_type && (
+                                <span className="truncate text-[10px] capitalize text-slate-600">
+                                  {String(result.property_type).replaceAll("_", " ")}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <ArrowRight size={16} className="shrink-0 text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-blue-400" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : propertySearch.trim() ? (
+                    <div className="rounded-2xl border border-white/7 bg-white/[0.02] px-5 py-12 text-center">
+                      <Building2 size={28} className="mx-auto text-slate-700" />
+                      <h3 className="mt-4 text-sm font-semibold text-slate-300">
+                        No hosted properties found
+                      </h3>
+                      <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-slate-600">
+                        Try the property name or the full 164xx property ID. Only properties currently hosted publicly appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/8 bg-white/[0.015] px-5 py-12 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+                        <Search size={21} />
+                      </div>
+                      <h3 className="mt-4 text-sm font-semibold text-slate-300">
+                        Search for a property
+                      </h3>
+                      <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-slate-600">
+                        Enter a property name or a RENFLIX property ID to discover publicly hosted properties.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── FOOTER ─── */}
       <footer className="relative z-10 border-t border-white/[0.06] bg-[#020617]/80 backdrop-blur-xl">

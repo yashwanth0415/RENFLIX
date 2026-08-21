@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
+import ClientAdminPanel from "./ClientAdminPanel";
 import {
   Button,
   Card,
@@ -305,6 +306,7 @@ export default function AdminPage() {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const adminSection = new URLSearchParams(location.search).get("section");
 
   const [activeTable, setActiveTable] = useState<TableKey>("organizations");
   const [data, setData] = useState<any[]>([]);
@@ -566,6 +568,10 @@ export default function AdminPage() {
     return null;
   }
 
+  if (adminSection === "clients") {
+    return <ClientAdminPanel />;
+  }
+
   // Show loading while data is fetching
   if (loading) {
     return (
@@ -612,6 +618,13 @@ export default function AdminPage() {
         </div>
 
         <nav className="flex-1 p-3 overflow-y-auto">
+          <button
+            onClick={() => { setMobileSidebarOpen(false); navigate("/admin?section=clients"); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-300 hover:bg-blue-500/10 mb-2 border border-blue-500/15"
+          >
+            <Users size={18} />
+            <span className="truncate">Clients</span>
+          </button>
           {Object.entries(TABLE_CONFIGS).map(([key, config]) => (
             <button
               key={key}

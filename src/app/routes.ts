@@ -30,6 +30,8 @@ import TenantIntelligencePage from "../features/tenant/TenantIntelligencePage";
 import SettingsPage from "../features/settings/SettingsPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
 import AdminPage from "../features/admin/AdminPage";
+import ClientPage from "../features/client/ClientPage";
+import PublicPropertyPage from "../features/public-property/PublicPropertyPage";
 
 export const router = createBrowserRouter([
   // ─── Public routes ──────────────────────────────────────
@@ -57,6 +59,16 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     Component: AdminPage,
+  },
+  {
+    path: "/client",
+    Component: ClientPage,
+  },
+
+  // Public property pages use the existing 164xx display IDs.
+  {
+    path: "/:propertyDisplayId",
+    Component: PublicPropertyPage,
   },
 
   // ─── Authenticated routes ──────────────────────────────
