@@ -158,6 +158,7 @@ export default function TenantPaymentsPage() {
 
   useEffect(() => {
     // Auto-handle UPI payment return
+    // Empty dependency array - logic runs based on sessionStorage paymentId
     const paymentId = sessionStorage.getItem("renflix:upi-payment-id");
 
     if (!paymentId) return;
@@ -270,7 +271,7 @@ export default function TenantPaymentsPage() {
       document.removeEventListener("visibilitychange", visibilityHandler);
       window.removeEventListener("focus", focusHandler);
     };
-  }, [payments, paying, profile?.organization_id]);
+  }, []);
 
   const pending = payments.filter((p) =>
     ["PENDING", "DUE", "OVERDUE", "PARTIALLY_PAID"].includes(p.status)
