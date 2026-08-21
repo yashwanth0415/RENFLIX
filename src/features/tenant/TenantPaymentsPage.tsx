@@ -28,13 +28,10 @@ function buildUpiUrl(
   upiId: string,
   amount: number,
   paymentId: string,
-  tenantName: string,
-  usePhone: boolean = false
+  tenantName: string
 ) {
   const params = [
-    usePhone
-      ? `ph=${encodeUpiPart(upiId)}` // phone number parameter
-      : `pa=${encodeUpiPart(upiId)}`, // UPI ID parameter
+    `pa=${encodeUpiPart(upiId)}`,
     `pn=${encodeUpiPart(tenantName || "RENFLIX Property Owner")}`,
     `am=${encodeURIComponent(amount.toFixed(2))}`,
     "cu=INR",
@@ -51,7 +48,6 @@ export default function TenantPaymentsPage() {
   const [unit, setUnit] = useState<Unit | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [ownerUpiId, setOwnerUpiId] = useState("");
-  const [ownerPhone, setOwnerPhone] = useState("");
   const [ownerName, setOwnerName] = useState("Property Owner");
   const [loading, setLoading] = useState(true);
 
@@ -108,18 +104,13 @@ export default function TenantPaymentsPage() {
 
       setPayments((data || []) as Payment[]);
 
-      const { data: contact, error: contactError } = await supabase.rpc(
-        "get_tenant_owner_contact"
+      const { data: upi, error: upiError } = await supabase.rpc(
+        "get_tenant_owner_upi"
       );
 
-      if (contactError) throw contactError;
+      if (upiError) throw upiError;
 
-      // Get owner phone or UPI ID from the contact data
-      const ownerPhone = (contact || { phone: "" }).phone || "";
-      const ownerUpiId = (contact || { upi_id: "" }).upi_id || "";
-
-      setOwnerUpiId(ownerUpiId);
-      setOwnerPhone(ownerPhone || "");
+      setOwnerUpiId((upi || "").trim());
 
       const { data: owner } = await supabase
         .from("profiles")
@@ -222,7 +213,6 @@ export default function TenantPaymentsPage() {
           {
             p_payment_id: payment.id,
             p_reference_number: "", // Empty UTR - will be marked for manual entry
-            p_use_phone: ownerPhone.length > 0, // Use phone number if configured
           }
         );
 
@@ -290,13 +280,9 @@ export default function TenantPaymentsPage() {
   void pending;
 
   function openPaymentInterface(payment: Payment) {
-    // Check if owner has phone number or UPI ID configured
-    const hasPhone = ownerUpiId?.startsWith("ph:") || false; // phone format
-    const hasUpi = ownerUpiId && !ownerUpiId.startsWith("ph:");
-
-    if (!hasPhone && !hasUpi) {
+    if (!ownerUpiId) {
       setToast({
-        msg: "The property owner has not configured a phone number or UPI ID yet.",
+        msg: "The property owner has not configured a UPI ID yet.",
         type: "error",
       });
       return;
@@ -306,20 +292,17 @@ export default function TenantPaymentsPage() {
   }
 
   function launchUpi(app: UpiApp) {
-    if (!paying) return;
+    if (!paying || !ownerUpiId) return;
 
     sessionStorage.setItem("renflix:upi-payment-id", paying.id);
     sessionStorage.setItem("renflix:upi-launch-time", String(Date.now()));
 
-    // Determine whether to use phone number or UPI ID
-    const usePhone = ownerPhone.length > 0;
     const url = buildUpiUrl(
       app,
-      usePhone ? ownerPhone : (ownerUpiId || ""),
+      ownerUpiId,
       paying.amount,
       paying.payment_display_id || paying.id.slice(0, 8),
-      ownerName,
-      usePhone
+      ownerName
     );
 
     window.location.href = url;
