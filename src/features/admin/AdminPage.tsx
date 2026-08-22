@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { appConfirm } from "../../lib/appConfirm";
 import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard,
@@ -123,6 +122,7 @@ profiles: {
         "TECHNICIAN",
         "COMMUNITY_MANAGER",
         "ADMIN",
+        "CLIENT",
       ],
     },
 
@@ -327,6 +327,7 @@ export default function AdminPage() {
   const [authPassword, setAuthPassword] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ message: string; resolve: (value: boolean) => void } | null>(null);
 
   const tableConfig = TABLE_CONFIGS[activeTable];
   const filteredData = data.filter((row) => {
@@ -870,6 +871,36 @@ export default function AdminPage() {
             </form>
           </Modal>
 
+          {deleteConfirm && (
+            <div
+              className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-delete-confirm-title"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) closeDeleteConfirmation(false);
+              }}
+            >
+              <div className="w-full max-w-md rounded-2xl border border-navy-700 bg-navy-950 shadow-2xl p-5">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-400/20 flex items-center justify-center text-red-400 shrink-0">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 id="admin-delete-confirm-title" className="font-display font-bold text-white text-lg">Confirm deletion</h3>
+                    <p className="text-sm text-navy-400 mt-1 leading-6">{deleteConfirm.message}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button variant="ghost" type="button" onClick={() => closeDeleteConfirmation(false)}>Cancel</Button>
+                  <button type="button" className="inline-flex items-center justify-center rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 transition-colors" onClick={() => closeDeleteConfirmation(true)}>
+                    <Trash2 size={14} className="mr-2" /> Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         </div>
       </main>
@@ -885,30 +916,167 @@ export default function AdminPage() {
     setSelectedIds(allSelected ? [] : Array.from(new Set([...selectedIds, ...ids])));
   }
 
+  function requestDeleteConfirmation(message: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      setDeleteConfirm({ message, resolve });
+    });
+  }
+
+  function closeDeleteConfirmation(value: boolean) {
+    const request = deleteConfirm;
+    setDeleteConfirm(null);
+    request?.resolve(value);
+  }
+
   async function handleDeleteSelected() {
     if (!selectedIds.length) {
       setToast({ msg: "Select at least one entry.", type: "error" });
       return;
     }
-    if (!(await appConfirm(`Delete ${selectedIds.length} selected ${tableConfig.label.toLowerCase()}? This permanently removes the database records.`))) return;
+
+    if (activeTable === "profiles") {
+      // Never allow the currently signed-in admin profile to be deleted.
+      if (user?.id && selectedIds.includes(user.id)) {
+        setToast({
+          msg: "The currently signed-in admin profile cannot be deleted.",
+          type: "error",
+        });
+        return;
+      }
+    }
+
+    const confirmed = await requestDeleteConfirmation(
+      `Delete ${selectedIds.length} selected ${tableConfig.label.toLowerCase()}? This permanently removes the database records.`
+    );
+
+    if (!confirmed) return;
 
     try {
-      const { error } = await supabase.rpc("admin_delete_records", {
-        p_table: activeTable,
-        p_ids: selectedIds,
+      let deletedCount = selectedIds.length;
+
+      if (activeTable === "profiles") {
+        const { data, error } = await supabase.functions.invoke(
+          "admin-delete-profile",
+          { body: { profileIds: selectedIds } }
+        );
+
+        if (error) {
+          let message = error.message || "Profile deletion failed.";
+          try {
+            if (error.context) {
+              const response = await error.context.json();
+              if (response?.error) message = response.error;
+            }
+          } catch {
+            // Keep fallback message.
+          }
+          throw new Error(message);
+        }
+
+        if (data?.error) throw new Error(data.error);
+        deletedCount = Number(data?.deletedCount ?? selectedIds.length);
+      } else {
+        const { data, error } = await supabase.rpc(
+          "admin_delete_records",
+          {
+            p_table: activeTable,
+            p_ids: selectedIds,
+          }
+        );
+
+        if (error) throw error;
+        deletedCount =
+          typeof data === "number"
+            ? data
+            : selectedIds.length;
+      }
+
+      setToast({
+        msg: `${deletedCount} record(s) deleted successfully.`,
+        type: "success",
       });
-      if (error) throw error;
-      setToast({ msg: `${selectedIds.length} record(s) deleted.`, type: "success" });
+
       setSelectedIds([]);
       setSelectionMode(false);
-      fetchData();
+      await fetchData();
     } catch (err: any) {
-      setToast({ msg: err.message || "Delete failed", type: "error" });
+      console.error("Delete failed:", err);
+      setToast({
+        msg: err?.message || "Delete failed. Please try again.",
+        type: "error",
+      });
     }
   }
 
-  function handleSingleDelete(id: string) {
-    setSelectedIds([id]);
-    setSelectionMode(true);
+  async function handleSingleDelete(id: string) {
+    if (activeTable === "profiles" && user?.id === id) {
+      setToast({
+        msg: "The currently signed-in admin profile cannot be deleted.",
+        type: "error",
+      });
+      return;
+    }
+
+    const confirmed = await requestDeleteConfirmation(
+      `Delete this ${tableConfig.label.slice(0, -1).toLowerCase()}? This permanently removes the database record.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      let deletedCount = 1;
+
+      if (activeTable === "profiles") {
+        const { data, error } = await supabase.functions.invoke(
+          "admin-delete-profile",
+          { body: { profileIds: [id] } }
+        );
+
+        if (error) {
+          let message = error.message || "Profile deletion failed.";
+          try {
+            if (error.context) {
+              const response = await error.context.json();
+              if (response?.error) message = response.error;
+            }
+          } catch {
+            // Keep fallback message.
+          }
+          throw new Error(message);
+        }
+
+        if (data?.error) throw new Error(data.error);
+        deletedCount = Number(data?.deletedCount ?? 1);
+      } else {
+        const { data, error } = await supabase.rpc(
+          "admin_delete_records",
+          {
+            p_table: activeTable,
+            p_ids: [id],
+          }
+        );
+
+        if (error) throw error;
+        deletedCount =
+          typeof data === "number" ? data : 1;
+      }
+
+      setToast({
+        msg: `${deletedCount} record(s) deleted successfully.`,
+        type: "success",
+      });
+
+      setSelectedIds((prev) =>
+        prev.filter((selectedId) => selectedId !== id)
+      );
+      setSelectionMode(false);
+      await fetchData();
+    } catch (err: any) {
+      console.error("Delete failed:", err);
+      setToast({
+        msg: err?.message || "Delete failed. Please try again.",
+        type: "error",
+      });
+    }
   }
 }

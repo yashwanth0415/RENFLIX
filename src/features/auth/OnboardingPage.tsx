@@ -19,46 +19,7 @@ import {
   normalizeIndianPhone,
 } from "../../lib/auth";
 
-const ROLES = [
-  {
-    value: "OWNER",
-    label: "Property Owner",
-    desc: "I own properties and want to manage them",
-    icon: "🏠",
-  },
-  {
-    value: "PROPERTY_MANAGER",
-    label: "Property Manager",
-    desc: "I manage properties professionally",
-    icon: "🏢",
-  },
-  {
-    value: "HOSTEL_MANAGER",
-    label: "Hostel / PG Manager",
-    desc: "I run a hostel, PG or co-living space",
-    icon: "🛏️",
-  },
-  {
-    value: "COMMUNITY_MANAGER",
-    label: "Community Manager",
-    desc: "I manage a residential society",
-    icon: "🏘️",
-  },
-  {
-    value: "TECHNICIAN",
-    label: "Technician",
-    desc: "I handle maintenance and repairs",
-    icon: "🔧",
-  },
-  {
-    value: "TENANT",
-    label: "Tenant",
-    desc: "I am renting a property",
-    icon: "🔑",
-  },
-];
-
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 type SignupIdentifierType =
   | "email"
@@ -86,11 +47,7 @@ export default function OnboardingPage() {
       "forward" | "back"
     >("forward");
 
-  const [role, setRole] =
-    useState(
-      profile?.role ||
-        "OWNER"
-    );
+  const role = "OWNER";
 
   const [fullName, setFullName] =
     useState(
@@ -136,15 +93,9 @@ export default function OnboardingPage() {
   // Organization requirement
   // ------------------------------------------------------------
 
-  const needsOrg = [
-    "OWNER",
-    "PROPERTY_MANAGER",
-    "HOSTEL_MANAGER",
-    "COMMUNITY_MANAGER",
-  ].includes(role);
+  const needsOrg = true;
 
-  const totalSteps =
-    needsOrg ? 3 : 2;
+  const totalSteps = 2;
 
   // ------------------------------------------------------------
   // Resolve signup identifier type
@@ -265,17 +216,10 @@ export default function OnboardingPage() {
           ""
       );
     }
-
-    if (profile?.role) {
-      setRole(
-        profile.role
-      );
-    }
   }, [
     profile?.full_name,
     profile?.email,
     profile?.phone,
-    profile?.role,
     user?.email,
     user?.phone,
   ]);
@@ -1126,13 +1070,7 @@ export default function OnboardingPage() {
         {/* Progress */}
 
         <div className="flex items-center gap-2 mb-8">
-          {[
-            1,
-            2,
-            ...(needsOrg
-              ? [3]
-              : []),
-          ].map(
+          {[1, 2].map(
             (s) => (
               <div
                 key={s}
@@ -1146,10 +1084,7 @@ export default function OnboardingPage() {
                   }`}
                 />
 
-                {s ===
-                (needsOrg
-                  ? 3
-                  : 2) ? null : (
+                {s === 2 ? null : (
                   <div
                     className={`w-2 h-2 rounded-full transition-all duration-300 ${
                       step >
@@ -1165,124 +1100,15 @@ export default function OnboardingPage() {
         </div>
 
         {/* ================================================== */}
-        {/* STEP 1 — ROLE                                     */}
+        {/* STEP 1 — PROFILE                                  */}
         {/* ================================================== */}
 
-        {step === 1 && (
-          <div
-            key="step1"
-            className={
-              animClass
-            }
-          >
-            <h2 className="font-display text-2xl font-bold text-white text-center mb-1.5">
-              What best describes you?
-            </h2>
-
-            <p className="text-navy-400 text-sm text-center mb-6">
-              We'll personalize RENFLIX for your role
-            </p>
-
-            <div className="grid grid-cols-1 gap-2 mb-6 stagger-children">
-              {ROLES.map(
-                (item) => (
-                  <button
-                    key={
-                      item.value
-                    }
-                    type="button"
-                    onClick={() =>
-                      setRole(
-                        item.value
-                      )
-                    }
-                    className={`text-left p-4 rounded-xl border transition-all duration-200 group relative overflow-hidden ${
-                      role ===
-                      item.value
-                        ? "bg-blue-600/15 border-blue-500 shadow-lg shadow-blue-500/10"
-                        : "bg-navy-800 border-navy-700 hover:border-navy-600 hover:bg-navy-700/60"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">
-                        {
-                          item.icon
-                        }
-                      </span>
-
-                      <div className="flex-1">
-                        <div
-                          className={`font-display font-semibold text-sm transition-colors ${
-                            role ===
-                            item.value
-                              ? "text-white"
-                              : "text-navy-200"
-                          }`}
-                        >
-                          {
-                            item.label
-                          }
-                        </div>
-
-                        <div className="text-xs text-navy-500 mt-0.5">
-                          {
-                            item.desc
-                          }
-                        </div>
-                      </div>
-
-                      {role ===
-                        item.value && (
-                        <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 animate-scale-in">
-                          <Check
-                            size={
-                              12
-                            }
-                            className="text-white"
-                            strokeWidth={
-                              3
-                            }
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {role ===
-                      item.value && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-transparent pointer-events-none" />
-                    )}
-                  </button>
-                )
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={
-                goNext
-              }
-              className="btn-primary w-full py-3 rounded-xl text-base flex items-center justify-center gap-2"
-            >
-              Continue
-              <ArrowRight
-                size={18}
-              />
-            </button>
-          </div>
-        )}
-
-        {/* ================================================== */}
-        {/* STEP 2 — PROFILE                                  */}
-        {/* ================================================== */}
-
-        {step === 2 &&
+        {step === 1 &&
           !submitting &&
           !done && (
             <div
-              key="step2"
-              className={
-                animClass
-              }
+              key="step1"
+              className={animClass}
             >
               <h2 className="font-display text-2xl font-bold text-white text-center mb-1.5">
                 Set up your profile
@@ -1477,67 +1303,33 @@ export default function OnboardingPage() {
               )}
 
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={
-                    goBack
-                  }
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl bg-navy-800 border border-navy-700 text-navy-300 hover:text-white hover:bg-navy-700 transition-all font-display font-semibold text-sm"
-                >
-                  <ArrowLeft
-                    size={
-                      16
-                    }
-                  />
-                  Back
-                </button>
 
                 <button
                   type="button"
-                  onClick={
-                    needsOrg
-                      ? goNext
-                      : handleFinish
-                  }
+                  onClick={goNext}
                   disabled={
                     !fullName.trim()
                   }
                   className="btn-primary flex-1 py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  {needsOrg ? (
-                    <>
-                      Next
-                      <ArrowRight
-                        size={
-                          16
-                        }
-                      />
-                    </>
-                  ) : (
-                    <>
-                      Get started
-                      <ArrowRight
-                        size={
-                          16
-                        }
-                      />
-                    </>
-                  )}
+                  <>
+                    Next
+                    <ArrowRight size={16} />
+                  </>
                 </button>
               </div>
             </div>
           )}
 
         {/* ================================================== */}
-        {/* STEP 3 — ORGANIZATION                             */}
+        {/* STEP 2 — ORGANIZATION                             */}
         {/* ================================================== */}
 
-        {step === 3 &&
-          needsOrg &&
+        {step === 2 &&
           !submitting &&
           !done && (
             <div
-              key="step3"
+              key="step2"
               className={
                 animClass
               }
