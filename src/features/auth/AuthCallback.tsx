@@ -118,27 +118,27 @@ export default function AuthCallback() {
         // information is collected.
         // ------------------------------------------------------
 
-        if (!isComplete) {
-          navigate(
-            "/onboarding",
-            {
-              replace: true,
-            }
-          );
-
-          return;
-        }
-
         // ------------------------------------------------------
-        // Fully configured account
+        // OAuth return must perform a full browser navigation once
+        // after Supabase has established the session. This makes
+        // sure the fresh auth/profile state is available before
+        // onboarding or the dashboard renders.
         // ------------------------------------------------------
+        //
+        // Using location.replace() instead of React Router navigate()
+        // intentionally reloads the application exactly once at the
+        // final destination. It also removes /auth/callback from the
+        // browser history.
+        // ------------------------------------------------------
+        const destination = isComplete
+          ? "/dashboard"
+          : "/onboarding";
 
-        navigate(
-          "/dashboard",
-          {
-            replace: true,
-          }
+        window.location.replace(
+          `${window.location.origin}${destination}`
         );
+
+        return;
       } catch (err) {
         console.error(
           "RENFLIX auth callback error:",
