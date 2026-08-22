@@ -253,6 +253,11 @@ profiles: {
       { key: "category", label: "Category", type: "text" },
       { key: "priority", label: "Priority", type: "select", options: ["LOW", "MEDIUM", "HIGH", "URGENT"], required: true },
       { key: "status", label: "Status", type: "select", options: ["SUBMITTED", "REVIEWED", "ASSIGNED", "ACCEPTED", "SCHEDULED", "IN_PROGRESS", "WAITING_FOR_PARTS", "COMPLETED", "VERIFIED", "CLOSED"], required: true },
+      { key: "assigned_to", label: "Assigned To", type: "text" },
+      { key: "estimated_cost", label: "Estimated Cost", type: "number" },
+      { key: "actual_cost", label: "Actual Cost", type: "number" },
+      { key: "scheduled_date", label: "Scheduled Date", type: "date" },
+      { key: "completed_date", label: "Completed Date", type: "date" },
       { key: "organization_id", label: "Org ID", type: "text" },
       { key: "created_at", label: "Created", type: "date" },
     ],
@@ -353,7 +358,7 @@ export default function AdminPage() {
     if (user && user.email === ADMIN_EMAIL) {
       fetchData();
     }
-  }, [activeTable, page, user]);
+  }, [activeTable, page, user, search]);
 
   // Add a timeout to prevent infinite loading
   useEffect(() => {
@@ -378,11 +383,35 @@ export default function AdminPage() {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
+      // Maintenance requests have stricter application RLS policies.
+      // The admin panel therefore reads them through a dedicated
+      // SECURITY DEFINER RPC that validates the RENFLIX admin email
+      // before returning the records.
+      if (activeTable === "maintenance_requests") {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+          "admin_get_maintenance_records",
+          {
+            p_from: from,
+            p_to: to,
+            p_search: search.trim() || null,
+          }
+        );
+
+        if (rpcError) throw rpcError;
+
+        const result = rpcResult as { data?: any[]; count?: number } | null;
+        setData(Array.isArray(result?.data) ? result.data : []);
+        setTotalCount(Number(result?.count ?? 0));
+        return;
+      }
+
       let query = supabase.from(activeTable).select("*", { count: "exact" });
 
       // Add search filter
       if (search && tableConfig.searchFields.length > 0) {
-        const orConditions = tableConfig.searchFields.map((f) => `${f}.ilike.%${search}%`).join(",");
+        const orConditions = tableConfig.searchFields
+          .map((f) => `${f}.ilike.%${search}%`)
+          .join(",");
         query = query.or(orConditions);
       }
 
@@ -395,7 +424,10 @@ export default function AdminPage() {
       setData(result || []);
       setTotalCount(count || 0);
     } catch (err: any) {
-      setToast({ msg: err.message || "Failed to fetch data", type: "error" });
+      console.error(`Failed to fetch ${activeTable}:`, err);
+      setData([]);
+      setTotalCount(0);
+      setToast({ msg: err.message || `Failed to fetch ${tableConfig.label.toLowerCase()}`, type: "error" });
     } finally {
       setLoading(false);
     }

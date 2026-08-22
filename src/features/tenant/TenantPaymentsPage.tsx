@@ -8,15 +8,32 @@ import { Button, Card, EmptyState, Input, Modal, PageHeader, Skeleton, StatusBad
 type UpiApp = {
   name: string;
   scheme: string;
-  initials: string;
-  className: string;
+  iconUrl: string;
 };
 
+// Payment-app logos are loaded from a web icon source so the real branded
+// Google Pay, PhonePe, Paytm and Amazon Pay artwork is displayed.
 const UPI_APPS: UpiApp[] = [
-  { name: "Google Pay", scheme: "tez", initials: "G", className: "bg-blue-500/15 text-blue-300" },
-  { name: "PhonePe", scheme: "phonepe", initials: "P", className: "bg-violet-500/15 text-violet-300" },
-  { name: "Paytm", scheme: "paytmmp", initials: "P", className: "bg-cyan-500/15 text-cyan-300" },
-  { name: "Amazon Pay", scheme: "amazonpay", initials: "A", className: "bg-amber-500/15 text-amber-300" },
+  {
+    name: "Google Pay",
+    scheme: "tez",
+    iconUrl: "https://img.icons8.com/color/96/google-pay.png",
+  },
+  {
+    name: "PhonePe",
+    scheme: "phonepe",
+    iconUrl: "https://img.icons8.com/color/96/phone-pe.png",
+  },
+  {
+    name: "Paytm",
+    scheme: "paytmmp",
+    iconUrl: "https://img.icons8.com/color/96/paytm.png",
+  },
+  {
+    name: "Amazon Pay",
+    scheme: "amazonpay",
+    iconUrl: "https://toppng.com/uploads/preview/amazon-pay-logo-11609098506wjubj2jpbm.png",
+  },
 ];
 
 function encodeUpiPart(value: string) {
@@ -153,123 +170,6 @@ export default function TenantPaymentsPage() {
     return () => {
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", onReturn);
-    };
-  }, []);
-
-  useEffect(() => {
-    // Auto-handle UPI payment return
-    // Empty dependency array - logic runs based on sessionStorage paymentId
-    const paymentId = sessionStorage.getItem("renflix:upi-payment-id");
-
-    if (!paymentId) return;
-
-    // Detect return from UPI app and auto-redirect
-    const handleReturn = async () => {
-      // Small delay to ensure DOM is updated
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Remove event listeners after handling
-      document.removeEventListener("visibilitychange", handleReturn);
-      window.removeEventListener("focus", handleReturn);
-
-      // Clear session storage
-      sessionStorage.removeItem("renflix:upi-payment-id");
-      sessionStorage.removeItem("renflix:upi-launch-time");
-
-      // Check payment status from current data
-      const payment =
-        payments.find((p) => p.id === paymentId) || paying;
-
-      if (!payment) return;
-
-      // If payment is already UNDER_REVIEW or PAID (from prior submission),
-      // show success automatically
-      if (
-        payment.status === "UNDER_REVIEW" ||
-        payment.status === "PAID" ||
-        payment.status === "RECEIVED"
-      ) {
-        setResult("success");
-        setResultPayment(payment);
-        setReturning(false);
-        setToast({
-          msg: "Payment verified successfully!",
-          type: "success",
-        });
-        return;
-      }
-
-      // If payment is still PENDING/DUE/OVERDUE/PARTIALLY_PAID,
-      // attempt to submit with empty UTR (will go to UNDER_REVIEW for admin verification)
-      // or show manual UTR entry flow
-      setResult("success");
-      setResultPayment(payment);
-      setReturning(false);
-
-      // Try to submit the payment intent automatically
-      try {
-        const { error } = await supabase.rpc(
-          "submit_upi_intent_payment",
-          {
-            p_payment_id: payment.id,
-            p_reference_number: "", // Empty UTR - will be marked for manual entry
-          }
-        );
-
-        if (error) {
-          // If RPC fails (e.g., status validation), show manual UTR flow
-          setReturning(true); // Stay in returning state for manual UTR
-          setToast({
-            msg:
-              "Payment returned. Please enter UTR to complete verification.",
-            type: "info",
-          });
-        } else {
-          // Successfully submitted for review
-          setToast({
-            msg: "Payment submitted for admin verification.",
-            type: "success",
-          });
-          await load();
-        }
-      } catch (e) {
-        setReturning(true);
-        setToast({
-          msg: "Payment verification in progress.",
-          type: "info",
-        });
-      }
-    };
-
-    // Set up one-time return handlers
-    const visibilityHandler = () => {
-      if (!document.hidden) {
-        handleReturn();
-      }
-    };
-
-    const focusHandler = () => {
-      handleReturn();
-    };
-
-    document.addEventListener("visibilitychange", visibilityHandler);
-    window.addEventListener("focus", focusHandler);
-
-    // Auto-redirect after 3 seconds if not handled yet
-    const timeoutId = setTimeout(() => {
-      document.removeEventListener("visibilitychange", visibilityHandler);
-      window.removeEventListener("focus", focusHandler);
-      // Redirect to payments page
-      sessionStorage.removeItem("renflix:upi-payment-id");
-      sessionStorage.removeItem("renflix:upi-launch-time");
-      // Navigate back to payments - will show verification state
-      // Note: In a real app, use router.push('/payments') but we'll just show state
-    }, 3000);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener("visibilitychange", visibilityHandler);
-      window.removeEventListener("focus", focusHandler);
     };
   }, []);
 
@@ -637,10 +537,14 @@ export default function TenantPaymentsPage() {
                     onClick={() => launchUpi(app)}
                     className="rounded-xl border border-navy-700 bg-navy-900 p-4 text-left hover:border-blue-500/50 hover:bg-navy-800 transition-colors"
                   >
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold mb-3 ${app.className}`}
-                    >
-                      {app.initials}
+                    <div className="w-14 h-14 rounded-2xl bg-white border border-navy-700/40 flex items-center justify-center mb-3 p-2.5 shadow-sm">
+                      <img
+                        src={app.iconUrl}
+                        alt={`${app.name} logo`}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
 
                     <div className="text-sm font-semibold text-white">
@@ -655,12 +559,12 @@ export default function TenantPaymentsPage() {
               </div>
             </div>
 
-            <div className="text-[11px] text-navy-500 leading-5">
+            {/*<div className="text-[11px] text-navy-500 leading-5">
               The selected app opens with the owner UPI ID and rent amount
               pre-filled. After returning to RENFLIX, confirm the payment
               result and enter the UTR if available. RENFLIX keeps the payment
               under review until it is verified.
-            </div>
+            </div>*/}
           </div>
         )}
       </Modal>
