@@ -57,9 +57,15 @@ const FALLBACK_ITEMS: MobileNavItem[] = [
 
 export function getMobileNavItems(profile: Profile | null): MobileNavItem[] {
   if (profile?.role === "TENANT") return TENANT_ITEMS;
-  if (["OWNER", "PROPERTY_MANAGER", "HOSTEL_MANAGER", "COMMUNITY_MANAGER", "TECHNICIAN"].includes(profile?.role || "")) {
+
+  if (
+    ["OWNER", "PROPERTY_MANAGER", "HOSTEL_MANAGER", "COMMUNITY_MANAGER", "TECHNICIAN"].includes(
+      profile?.role || ""
+    )
+  ) {
     return OWNER_ITEMS;
   }
+
   return FALLBACK_ITEMS;
 }
 
@@ -72,9 +78,11 @@ function storageKey(userId: string) {
 
 export function getDefaultMobileNav(profile: Profile | null): string[] {
   const options = getMobileNavItems(profile);
-  const preferred = profile?.role === "TENANT"
-    ? ["/dashboard", "/payments", "/maintenance", "/announcements"]
-    : ["/dashboard", "/units", "/tenants", "/payments"];
+
+  const preferred =
+    profile?.role === "TENANT"
+      ? ["/dashboard", "/payments", "/maintenance", "/announcements"]
+      : ["/dashboard", "/units", "/tenants", "/payments"];
 
   const selected = preferred
     .map((to) => options.find((item) => item.to === to)?.to)
@@ -85,22 +93,35 @@ export function getDefaultMobileNav(profile: Profile | null): string[] {
     : options.slice(0, MOBILE_NAV_COUNT).map((item) => item.to);
 }
 
-export function getSavedMobileNav(profile: Profile | null, userId?: string | null): string[] {
+export function getSavedMobileNav(
+  profile: Profile | null,
+  userId?: string | null
+): string[] {
   const options = getMobileNavItems(profile);
   const defaults = getDefaultMobileNav(profile);
+
   if (!userId) return defaults;
 
   try {
     const raw = localStorage.getItem(storageKey(userId));
-    if (!raw) return defaults;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length !== MOBILE_NAV_COUNT) return defaults;
 
-    const valid = parsed.filter((to): to is string =>
-      typeof to === "string" && options.some((item) => item.to === to)
+    if (!raw) return defaults;
+
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed) || parsed.length !== MOBILE_NAV_COUNT) {
+      return defaults;
+    }
+
+    const valid = parsed.filter(
+      (to): to is string =>
+        typeof to === "string" && options.some((item) => item.to === to)
     );
 
-    if (valid.length !== MOBILE_NAV_COUNT || new Set(valid).size !== MOBILE_NAV_COUNT) {
+    if (
+      valid.length !== MOBILE_NAV_COUNT ||
+      new Set(valid).size !== MOBILE_NAV_COUNT
+    ) {
       return defaults;
     }
 
@@ -110,56 +131,111 @@ export function getSavedMobileNav(profile: Profile | null, userId?: string | nul
   }
 }
 
-export function saveMobileNav(userId: string | null | undefined, items: string[]) {
+export function saveMobileNav(
+  userId: string | null | undefined,
+  items: string[]
+) {
   if (!userId || items.length !== MOBILE_NAV_COUNT) return;
+
   localStorage.setItem(storageKey(userId), JSON.stringify(items));
+
   window.dispatchEvent(new CustomEvent("renflix-mobile-nav-change"));
 }
 
-export default function MobileBottomNav({ profile }: { profile: Profile | null }) {
+export default function MobileBottomNav({
+  profile,
+}: {
+  profile: Profile | null;
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const userId = profile?.id || null;
-  const [selected, setSelected] = useState<string[]>(() => getSavedMobileNav(profile, userId));
 
-  const options = useMemo(() => getMobileNavItems(profile), [profile?.role]);
+  const [selected, setSelected] = useState<string[]>(() =>
+    getSavedMobileNav(profile, userId)
+  );
+
+  const options = useMemo(
+    () => getMobileNavItems(profile),
+    [profile?.role]
+  );
 
   useEffect(() => {
     setSelected(getSavedMobileNav(profile, userId));
   }, [profile, userId]);
 
   useEffect(() => {
-    const refresh = () => setSelected(getSavedMobileNav(profile, userId));
+    const refresh = () =>
+      setSelected(getSavedMobileNav(profile, userId));
+
     window.addEventListener("renflix-mobile-nav-change", refresh);
-    return () => window.removeEventListener("renflix-mobile-nav-change", refresh);
+
+    return () =>
+      window.removeEventListener(
+        "renflix-mobile-nav-change",
+        refresh
+      );
   }, [profile, userId]);
 
   const items = selected
     .map((to) => options.find((item) => item.to === to))
     .filter((item): item is MobileNavItem => Boolean(item));
 
+  const activeIndex = items.findIndex(
+    (item) =>
+      location.pathname === item.to ||
+      location.pathname.startsWith(`${item.to}/`)
+  );
+
   return (
-    <nav className="mobile-bottom-nav lg:hidden" aria-label="Mobile navigation">
+    <nav
+      className="mobile-bottom-nav lg:hidden"
+      aria-label="Mobile navigation"
+    >
       <div className="mobile-bottom-nav__glow" aria-hidden="true" />
+
       <div className="mobile-bottom-nav__inner">
+        {/* ONE SHARED LIQUID INDICATOR */}
+        <span
+          className="mobile-bottom-nav__liquid-indicator"
+          style={{
+            transform: `translateX(calc(${Math.max(
+              activeIndex,
+              0
+            )} * (100% + 4px)))`,
+          }}
+          aria-hidden="true"
+        />
+
         {items.map((item) => {
           const Icon = item.icon;
-          const active = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+
+          const active =
+            location.pathname === item.to ||
+            location.pathname.startsWith(`${item.to}/`);
 
           return (
             <button
               key={item.to}
               type="button"
               onClick={() => navigate(item.to)}
-              className={`mobile-bottom-nav__item ${active ? "is-active" : ""}`}
+              className={`mobile-bottom-nav__item ${
+                active ? "is-active" : ""
+              }`}
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
             >
               <span className="mobile-bottom-nav__icon-wrap">
-                <span className="mobile-bottom-nav__active-pill" aria-hidden="true" />
-                <Icon size={20} strokeWidth={active ? 2.4 : 2} className="mobile-bottom-nav__icon" />
+                <Icon
+                  size={22}
+                  strokeWidth={active ? 2.6 : 2.2}
+                  className="mobile-bottom-nav__icon"
+                />
               </span>
-              <span className="mobile-bottom-nav__label">{item.label}</span>
+
+              <span className="mobile-bottom-nav__label">
+                {item.label}
+              </span>
             </button>
           );
         })}
