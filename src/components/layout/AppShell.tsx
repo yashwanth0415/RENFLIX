@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import Sidebar from "./Sidebar";
+import MobileBottomNav from "./MobileBottomNav";
 
 import {
   useAuth,
@@ -993,12 +994,13 @@ export default function AppShell() {
         {/* CONTENT                                            */}
         {/* -------------------------------------------------- */}
 
-        <main className="flex-1 overflow-y-auto pt-[58px] lg:pt-0 overscroll-contain">
+        <main className="flex-1 overflow-y-auto pt-[58px] pb-[88px] lg:pt-0 lg:pb-0 overscroll-contain">
           <div className="p-4 md:p-6 lg:p-8">
             <Outlet />
           </div>
         </main>
       </div>
+      <MobileBottomNav profile={profile} />
     </div>
   );
 }
@@ -1165,7 +1167,7 @@ function SplashScreen() {
       <div className="flex flex-col items-center gap-6 animate-fade-in">
         <div className="relative">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-2xl">
-            <span className="text-white font-display font-extrabold text-2xl">R</span>
+            <img src="/logo.png" alt="RENFLIX" className="w-10 h-10 object-contain" />
           </div>
           <div className="absolute -inset-2 rounded-[20px] border-2 border-transparent border-t-blue-500 animate-spin" />
         </div>

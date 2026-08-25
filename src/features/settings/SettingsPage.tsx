@@ -12,6 +12,8 @@ import {
   Trash2,
   X,
   RefreshCw,
+  Smartphone,
+  GripVertical,
 } from "lucide-react";
 
 import { supabase } from "../../lib/supabase";
@@ -33,6 +35,7 @@ import {
 } from "../../components/ui";
 
 import type { UserRole } from "../../lib/types";
+import { getMobileNavItems, getSavedMobileNav, saveMobileNav, MOBILE_NAV_COUNT } from "../../components/layout/MobileBottomNav";
 
 import {
   isEmailIdentifier,
@@ -148,6 +151,30 @@ export default function SettingsPage() {
     msg: string;
     type: "success" | "error";
   } | null>(null);
+
+  const mobileNavOptions = getMobileNavItems(profile);
+  const [mobileNav, setMobileNav] = useState<string[]>(() => getSavedMobileNav(profile, user?.id));
+
+  useEffect(() => {
+    setMobileNav(getSavedMobileNav(profile, user?.id));
+  }, [profile?.role, user?.id]);
+
+  function updateMobileNav(index: number, value: string) {
+    setMobileNav((current) => {
+      const next = [...current];
+      const duplicateIndex = next.findIndex((item, itemIndex) => item === value && itemIndex !== index);
+      if (duplicateIndex >= 0) {
+        next[duplicateIndex] = next[index];
+      }
+      next[index] = value;
+      return next;
+    });
+  }
+
+  function saveMobileNavigation() {
+    saveMobileNav(user?.id, mobileNav);
+    setToast({ msg: "Mobile navigation updated.", type: "success" });
+  }
 
   const [
     showRoleModal,
@@ -1243,6 +1270,55 @@ export default function SettingsPage() {
               </p>
             )}
           </form>
+        </Card>
+      )}
+
+      {/* ====================================================== */}
+      {/* MOBILE NAVIGATION                                    */}
+      {/* ====================================================== */}
+
+      {tab === "profile" && (
+        <Card className="mt-5 overflow-hidden">
+          <div className="flex items-start gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0">
+              <Smartphone size={19} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-display font-bold text-white flex items-center gap-2">
+                Mobile navigation
+              </h2>
+              <p className="text-xs text-navy-500 mt-1 leading-relaxed">
+                Choose the 4 shortcuts shown in the bottom navigation on phones. These settings stay on this device.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3">
+            {Array.from({ length: MOBILE_NAV_COUNT }).map((_, index) => (
+              <div key={index} className="flex items-center gap-3 rounded-2xl border border-navy-700 bg-navy-900/55 px-3 py-3">
+                <div className="w-8 h-8 rounded-lg bg-navy-800 flex items-center justify-center text-navy-500 flex-shrink-0">
+                  <GripVertical size={16} />
+                </div>
+                <div className="text-[11px] font-mono text-navy-500 w-5 flex-shrink-0">{index + 1}</div>
+                <Select
+                  aria-label={`Mobile navigation option ${index + 1}`}
+                  value={mobileNav[index] || mobileNavOptions[index]?.to || mobileNavOptions[0]?.to || ""}
+                  onChange={(e) => updateMobileNav(index, e.target.value)}
+                  options={mobileNavOptions.map((item) => ({ value: item.to, label: item.label }))}
+                  className="flex-1"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-blue-500/5 border border-blue-500/10 px-3 py-3">
+            <div className="text-[11px] text-navy-500">
+              Desktop sidebar stays unchanged.
+            </div>
+            <Button type="button" onClick={saveMobileNavigation} className="flex-shrink-0">
+              Save navigation
+            </Button>
+          </div>
         </Card>
       )}
 
