@@ -23,45 +23,149 @@ export type MobileNavItem = {
 };
 
 const OWNER_ITEMS: MobileNavItem[] = [
-  { to: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { to: "/properties", label: "Properties", icon: Building2 },
-  { to: "/units", label: "Units", icon: DoorOpen },
-  { to: "/tenants", label: "Tenants", icon: Users },
-  { to: "/payments", label: "Payments", icon: CreditCard },
-  { to: "/maintenance", label: "Maintenance", icon: Wrench },
-  { to: "/community", label: "Community", icon: Globe },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/intelligence", label: "Intelligence", icon: Cpu },
-  { to: "/settings", label: "Settings", icon: Settings },
+  {
+    to: "/dashboard",
+    label: "Home",
+    icon: LayoutDashboard,
+  },
+  {
+    to: "/properties",
+    label: "Properties",
+    icon: Building2,
+  },
+  {
+    to: "/units",
+    label: "Units",
+    icon: DoorOpen,
+  },
+  {
+    to: "/tenants",
+    label: "Tenants",
+    icon: Users,
+  },
+  {
+    to: "/payments",
+    label: "Payments",
+    icon: CreditCard,
+  },
+  {
+    to: "/maintenance",
+    label: "Maintenance",
+    icon: Wrench,
+  },
+  {
+    to: "/community",
+    label: "Community",
+    icon: Globe,
+  },
+  {
+    to: "/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+  },
+  {
+    to: "/intelligence",
+    label: "Intelligence",
+    icon: Cpu,
+  },
+  {
+    to: "/settings",
+    label: "Settings",
+    icon: Settings,
+  },
 ];
 
 const TENANT_ITEMS: MobileNavItem[] = [
-  { to: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { to: "/payments", label: "Payments", icon: CreditCard },
-  { to: "/maintenance", label: "Maintenance", icon: Wrench },
-  { to: "/announcements", label: "Announcements", icon: Megaphone },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/intelligence", label: "Intelligence", icon: Cpu },
-  { to: "/settings", label: "Settings", icon: Settings },
+  {
+    to: "/dashboard",
+    label: "Home",
+    icon: LayoutDashboard,
+  },
+  {
+    to: "/payments",
+    label: "Payments",
+    icon: CreditCard,
+  },
+  {
+    to: "/maintenance",
+    label: "Maintenance",
+    icon: Wrench,
+  },
+  {
+    to: "/announcements",
+    label: "Announcements",
+    icon: Megaphone,
+  },
+  {
+    to: "/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+  },
+  {
+    to: "/intelligence",
+    label: "Intelligence",
+    icon: Cpu,
+  },
+  {
+    to: "/settings",
+    label: "Settings",
+    icon: Settings,
+  },
 ];
 
 const FALLBACK_ITEMS: MobileNavItem[] = [
-  { to: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { to: "/properties", label: "Properties", icon: Building2 },
-  { to: "/units", label: "Units", icon: DoorOpen },
-  { to: "/tenants", label: "Tenants", icon: Users },
-  { to: "/payments", label: "Payments", icon: CreditCard },
-  { to: "/maintenance", label: "Maintenance", icon: Wrench },
-  { to: "/settings", label: "Settings", icon: Settings },
+  {
+    to: "/dashboard",
+    label: "Home",
+    icon: LayoutDashboard,
+  },
+  {
+    to: "/properties",
+    label: "Properties",
+    icon: Building2,
+  },
+  {
+    to: "/units",
+    label: "Units",
+    icon: DoorOpen,
+  },
+  {
+    to: "/tenants",
+    label: "Tenants",
+    icon: Users,
+  },
+  {
+    to: "/payments",
+    label: "Payments",
+    icon: CreditCard,
+  },
+  {
+    to: "/maintenance",
+    label: "Maintenance",
+    icon: Wrench,
+  },
+  {
+    to: "/settings",
+    label: "Settings",
+    icon: Settings,
+  },
 ];
 
-export function getMobileNavItems(profile: Profile | null): MobileNavItem[] {
-  if (profile?.role === "TENANT") return TENANT_ITEMS;
+export function getMobileNavItems(
+  profile: Profile | null
+): MobileNavItem[] {
+  if (profile?.role === "TENANT") {
+    return TENANT_ITEMS;
+  }
 
   if (
-    ["OWNER", "PROPERTY_MANAGER", "HOSTEL_MANAGER", "COMMUNITY_MANAGER", "TECHNICIAN"].includes(
-      profile?.role || ""
-    )
+    [
+      "OWNER",
+      "PROPERTY_MANAGER",
+      "HOSTEL_MANAGER",
+      "COMMUNITY_MANAGER",
+      "TECHNICIAN",
+    ].includes(profile?.role || "")
   ) {
     return OWNER_ITEMS;
   }
@@ -69,58 +173,111 @@ export function getMobileNavItems(profile: Profile | null): MobileNavItem[] {
   return FALLBACK_ITEMS;
 }
 
+/* ============================================================
+   MOBILE NAVIGATION SELECTION
+   ============================================================ */
+
 const STORAGE_PREFIX = "renflix-mobile-nav";
+
 export const MOBILE_NAV_COUNT = 4;
 
 function storageKey(userId: string) {
   return `${STORAGE_PREFIX}:${userId}`;
 }
 
-export function getDefaultMobileNav(profile: Profile | null): string[] {
+export function getDefaultMobileNav(
+  profile: Profile | null
+): string[] {
   const options = getMobileNavItems(profile);
 
   const preferred =
     profile?.role === "TENANT"
-      ? ["/dashboard", "/payments", "/maintenance", "/announcements"]
-      : ["/dashboard", "/units", "/tenants", "/payments"];
+      ? [
+          "/dashboard",
+          "/payments",
+          "/maintenance",
+          "/announcements",
+        ]
+      : [
+          "/dashboard",
+          "/units",
+          "/tenants",
+          "/payments",
+        ];
 
   const selected = preferred
-    .map((to) => options.find((item) => item.to === to)?.to)
-    .filter((to): to is string => Boolean(to));
+    .map(
+      (to) =>
+        options.find(
+          (item) => item.to === to
+        )?.to
+    )
+    .filter(
+      (to): to is string =>
+        Boolean(to)
+    );
 
-  return selected.length === MOBILE_NAV_COUNT
+  return selected.length ===
+    MOBILE_NAV_COUNT
     ? selected
-    : options.slice(0, MOBILE_NAV_COUNT).map((item) => item.to);
+    : options
+        .slice(0, MOBILE_NAV_COUNT)
+        .map((item) => item.to);
 }
 
 export function getSavedMobileNav(
   profile: Profile | null,
   userId?: string | null
 ): string[] {
-  const options = getMobileNavItems(profile);
-  const defaults = getDefaultMobileNav(profile);
+  const options =
+    getMobileNavItems(profile);
 
-  if (!userId) return defaults;
+  const defaults =
+    getDefaultMobileNav(profile);
+
+  if (!userId) {
+    return defaults;
+  }
 
   try {
-    const raw = localStorage.getItem(storageKey(userId));
+    const raw =
+      localStorage.getItem(
+        storageKey(userId)
+      );
 
-    if (!raw) return defaults;
-
-    const parsed = JSON.parse(raw);
-
-    if (!Array.isArray(parsed) || parsed.length !== MOBILE_NAV_COUNT) {
+    if (!raw) {
       return defaults;
     }
 
-    const valid = parsed.filter(
-      (to): to is string =>
-        typeof to === "string" && options.some((item) => item.to === to)
-    );
+    const parsed =
+      JSON.parse(raw);
 
     if (
-      valid.length !== MOBILE_NAV_COUNT ||
-      new Set(valid).size !== MOBILE_NAV_COUNT
+      !Array.isArray(parsed) ||
+      parsed.length !==
+        MOBILE_NAV_COUNT
+    ) {
+      return defaults;
+    }
+
+    const valid =
+      parsed.filter(
+        (
+          to
+        ): to is string =>
+          typeof to ===
+            "string" &&
+          options.some(
+            (item) =>
+              item.to === to
+          )
+      );
+
+    if (
+      valid.length !==
+        MOBILE_NAV_COUNT ||
+      new Set(valid).size !==
+        MOBILE_NAV_COUNT
     ) {
       return defaults;
     }
@@ -132,15 +289,97 @@ export function getSavedMobileNav(
 }
 
 export function saveMobileNav(
-  userId: string | null | undefined,
+  userId:
+    | string
+    | null
+    | undefined,
   items: string[]
 ) {
-  if (!userId || items.length !== MOBILE_NAV_COUNT) return;
+  if (
+    !userId ||
+    items.length !==
+      MOBILE_NAV_COUNT
+  ) {
+    return;
+  }
 
-  localStorage.setItem(storageKey(userId), JSON.stringify(items));
+  localStorage.setItem(
+    storageKey(userId),
+    JSON.stringify(items)
+  );
 
-  window.dispatchEvent(new CustomEvent("renflix-mobile-nav-change"));
+  window.dispatchEvent(
+    new CustomEvent(
+      "renflix-mobile-nav-change"
+    )
+  );
 }
+
+/* ============================================================
+   MOBILE NAVIGATION ON / OFF
+   ============================================================ */
+
+const MOBILE_NAV_ENABLED_PREFIX =
+  "renflix-mobile-nav-enabled";
+
+function enabledStorageKey(
+  userId: string
+) {
+  return `${MOBILE_NAV_ENABLED_PREFIX}:${userId}`;
+}
+
+export function getMobileNavEnabled(
+  userId?: string | null
+): boolean {
+  if (!userId) {
+    return true;
+  }
+
+  try {
+    const saved =
+      localStorage.getItem(
+        enabledStorageKey(userId)
+      );
+
+    /*
+     * Default = ON
+     */
+    if (saved === null) {
+      return true;
+    }
+
+    return saved === "true";
+  } catch {
+    return true;
+  }
+}
+
+export function saveMobileNavEnabled(
+  userId:
+    | string
+    | null
+    | undefined,
+  enabled: boolean
+) {
+  if (!userId) {
+    return;
+  }
+
+  localStorage.setItem(
+    enabledStorageKey(userId),
+    String(enabled)
+  );
+
+  window.dispatchEvent(
+    new CustomEvent(
+      "renflix-mobile-nav-enabled-change"
+    )
+  );
+}
+
+/* ============================================================
+   COMPONENT
+   ============================================================ */
 
 export default function MobileBottomNav({
   profile,
@@ -148,27 +387,73 @@ export default function MobileBottomNav({
   profile: Profile | null;
 }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const userId = profile?.id || null;
+  const location =
+    useLocation();
 
-  const [selected, setSelected] = useState<string[]>(() =>
-    getSavedMobileNav(profile, userId)
+  const userId =
+    profile?.id || null;
+
+  const [
+    selected,
+    setSelected,
+  ] = useState<string[]>(
+    () =>
+      getSavedMobileNav(
+        profile,
+        userId
+      )
+  );
+
+  const [
+    mobileNavEnabled,
+    setMobileNavEnabled,
+  ] = useState<boolean>(
+    () =>
+      getMobileNavEnabled(
+        userId
+      )
   );
 
   const options = useMemo(
-    () => getMobileNavItems(profile),
+    () =>
+      getMobileNavItems(
+        profile
+      ),
     [profile?.role]
   );
 
+  /* ----------------------------------------------------------
+     Refresh selected navigation
+     ---------------------------------------------------------- */
+
   useEffect(() => {
-    setSelected(getSavedMobileNav(profile, userId));
+    setSelected(
+      getSavedMobileNav(
+        profile,
+        userId
+      )
+    );
   }, [profile, userId]);
 
-  useEffect(() => {
-    const refresh = () =>
-      setSelected(getSavedMobileNav(profile, userId));
+  /* ----------------------------------------------------------
+     Refresh when navigation choices change
+     ---------------------------------------------------------- */
 
-    window.addEventListener("renflix-mobile-nav-change", refresh);
+  useEffect(() => {
+    const refresh =
+      () => {
+        setSelected(
+          getSavedMobileNav(
+            profile,
+            userId
+          )
+        );
+      };
+
+    window.addEventListener(
+      "renflix-mobile-nav-change",
+      refresh
+    );
 
     return () =>
       window.removeEventListener(
@@ -177,25 +462,95 @@ export default function MobileBottomNav({
       );
   }, [profile, userId]);
 
-  const items = selected
-    .map((to) => options.find((item) => item.to === to))
-    .filter((item): item is MobileNavItem => Boolean(item));
+  /* ----------------------------------------------------------
+     Refresh ON/OFF state
+     ---------------------------------------------------------- */
 
-  const activeIndex = items.findIndex(
-    (item) =>
-      location.pathname === item.to ||
-      location.pathname.startsWith(`${item.to}/`)
-  );
+  useEffect(() => {
+    setMobileNavEnabled(
+      getMobileNavEnabled(
+        userId
+      )
+    );
+  }, [userId]);
+
+  useEffect(() => {
+    const refresh =
+      () => {
+        setMobileNavEnabled(
+          getMobileNavEnabled(
+            userId
+          )
+        );
+      };
+
+    window.addEventListener(
+      "renflix-mobile-nav-enabled-change",
+      refresh
+    );
+
+    return () =>
+      window.removeEventListener(
+        "renflix-mobile-nav-enabled-change",
+        refresh
+      );
+  }, [userId]);
+
+  /* ----------------------------------------------------------
+     Completely hide navigation when disabled
+     ---------------------------------------------------------- */
+
+  if (!mobileNavEnabled) {
+    return null;
+  }
+
+  /* ----------------------------------------------------------
+     Build visible navigation items
+     ---------------------------------------------------------- */
+
+  const items = selected
+    .map((to) =>
+      options.find(
+        (item) =>
+          item.to === to
+      )
+    )
+    .filter(
+      (
+        item
+      ): item is MobileNavItem =>
+        Boolean(item)
+    );
+
+  /* ----------------------------------------------------------
+     Find active tab
+     ---------------------------------------------------------- */
+
+  const activeIndex =
+    items.findIndex(
+      (item) =>
+        location.pathname ===
+          item.to ||
+        location.pathname.startsWith(
+          `${item.to}/`
+        )
+    );
 
   return (
     <nav
       className="mobile-bottom-nav lg:hidden"
       aria-label="Mobile navigation"
     >
-      <div className="mobile-bottom-nav__glow" aria-hidden="true" />
+      <div
+        className="mobile-bottom-nav__glow"
+        aria-hidden="true"
+      />
 
       <div className="mobile-bottom-nav__inner">
-        {/* ONE SHARED LIQUID INDICATOR */}
+        {/* --------------------------------------------------
+            ONE SHARED LIQUID GLASS INDICATOR
+        -------------------------------------------------- */}
+
         <span
           className="mobile-bottom-nav__liquid-indicator"
           style={{
@@ -207,38 +562,62 @@ export default function MobileBottomNav({
           aria-hidden="true"
         />
 
-        {items.map((item) => {
-          const Icon = item.icon;
+        {items.map(
+          (item) => {
+            const Icon =
+              item.icon;
 
-          const active =
-            location.pathname === item.to ||
-            location.pathname.startsWith(`${item.to}/`);
+            const active =
+              location.pathname ===
+                item.to ||
+              location.pathname.startsWith(
+                `${item.to}/`
+              );
 
-          return (
-            <button
-              key={item.to}
-              type="button"
-              onClick={() => navigate(item.to)}
-              className={`mobile-bottom-nav__item ${
-                active ? "is-active" : ""
-              }`}
-              aria-current={active ? "page" : undefined}
-              aria-label={item.label}
-            >
-              <span className="mobile-bottom-nav__icon-wrap">
-                <Icon
-                  size={22}
-                  strokeWidth={active ? 2.6 : 2.2}
-                  className="mobile-bottom-nav__icon"
-                />
-              </span>
+            return (
+              <button
+                key={item.to}
+                type="button"
+                onClick={() =>
+                  navigate(
+                    item.to
+                  )
+                }
+                className={`mobile-bottom-nav__item ${
+                  active
+                    ? "is-active"
+                    : ""
+                }`}
+                aria-current={
+                  active
+                    ? "page"
+                    : undefined
+                }
+                aria-label={
+                  item.label
+                }
+              >
+                <span className="mobile-bottom-nav__icon-wrap">
+                  <Icon
+                    size={23}
+                    strokeWidth={
+                      active
+                        ? 2.4
+                        : 2.2
+                    }
+                    className="mobile-bottom-nav__icon"
+                  />
+                </span>
 
-              <span className="mobile-bottom-nav__label">
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+                <span className="mobile-bottom-nav__label">
+                  {
+                    item.label
+                  }
+                </span>
+              </button>
+            );
+          }
+        )}
       </div>
     </nav>
   );

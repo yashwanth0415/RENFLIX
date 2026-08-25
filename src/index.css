@@ -730,6 +730,42 @@ button, a, select, input, textarea { -webkit-tap-highlight-color: transparent; }
 @media (min-width: 1024px) {
   .mobile-bottom-nav { display: none; }
 }
+@media (max-width: 1023px) {
+  /* Bottom navigation stays below overlays */
+  .mobile-bottom-nav {
+    position: fixed;
+    z-index: 40;
+  }
+
+  /* All dialogs, modals, alerts, sheets and popovers
+     should appear above the bottom navigation */
+  [role="dialog"],
+  [role="alertdialog"],
+  [data-radix-dialog-overlay],
+  [data-radix-alert-dialog-overlay],
+  [data-radix-popover-content],
+  [data-radix-dropdown-menu-content],
+  [data-radix-select-content],
+  [data-radix-toast-viewport],
+  .modal,
+  .modal-overlay,
+  .dialog,
+  .alert,
+  .toast,
+  .popover,
+  .dropdown-menu,
+  .sheet,
+  .drawer {
+    z-index: 100 !important;
+  }
+
+  /* Overlay backdrop itself must also cover the navigation */
+  [data-radix-dialog-overlay],
+  [data-radix-alert-dialog-overlay],
+  .modal-overlay {
+    z-index: 90 !important;
+  }
+}
 
 html.theme-light .mobile-bottom-nav__inner {
   background: rgba(255,255,255,.9);

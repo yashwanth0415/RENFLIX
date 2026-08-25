@@ -35,7 +35,15 @@ import {
 } from "../../components/ui";
 
 import type { UserRole } from "../../lib/types";
-import { getMobileNavItems, getSavedMobileNav, saveMobileNav, MOBILE_NAV_COUNT } from "../../components/layout/MobileBottomNav";
+
+import {
+  getMobileNavItems,
+  getSavedMobileNav,
+  saveMobileNav,
+  MOBILE_NAV_COUNT,
+  getMobileNavEnabled,
+  saveMobileNavEnabled,
+} from "../../components/layout/MobileBottomNav";
 
 import {
   isEmailIdentifier,
@@ -60,11 +68,13 @@ const ROLES: {
   },
   {
     value: "HOSTEL_MANAGER",
-    label: "Hostel / PG Manager",
+    label:
+      "Hostel / PG Manager",
   },
   {
     value: "COMMUNITY_MANAGER",
-    label: "Community Manager",
+    label:
+      "Community Manager",
   },
   {
     value: "TECHNICIAN",
@@ -72,7 +82,10 @@ const ROLES: {
   },
 ];
 
-type SettingsTab = "profile" | "org" | "security";
+type SettingsTab =
+  | "profile"
+  | "org"
+  | "security";
 
 type ArchivedItem = {
   type: string;
@@ -90,12 +103,28 @@ export default function SettingsPage() {
 
   const navigate = useNavigate();
 
-  const [theme, setTheme] = useState<"dark" | "light">(
+  /* ==========================================================
+     THEME
+     ========================================================== */
+
+  const [
+    theme,
+    setTheme,
+  ] = useState<
+    "dark" | "light"
+  >(
     () =>
-      (localStorage.getItem("renflix-theme") as
+      (localStorage.getItem(
+        "renflix-theme"
+      ) as
         | "dark"
-        | "light") || "dark"
+        | "light") ||
+      "dark"
   );
+
+  /* ==========================================================
+     DEVICE NOTIFICATIONS
+     ========================================================== */
 
   const [
     deviceNotifications,
@@ -107,8 +136,14 @@ export default function SettingsPage() {
     setNotificationBusy,
   ] = useState(false);
 
-  const [showArchived, setShowArchived] =
-    useState(false);
+  /* ==========================================================
+     ARCHIVE
+     ========================================================== */
+
+  const [
+    showArchived,
+    setShowArchived,
+  ] = useState(false);
 
   const [
     archivedLoading,
@@ -118,63 +153,219 @@ export default function SettingsPage() {
   const [
     archivedItems,
     setArchivedItems,
-  ] = useState<ArchivedItem[]>([]);
+  ] = useState<
+    ArchivedItem[]
+  >([]);
 
   const [
     selectedArchived,
     setSelectedArchived,
-  ] = useState<string[]>([]);
+  ] = useState<
+    string[]
+  >([]);
 
-  const [tab, setTab] =
-    useState<SettingsTab>("profile");
+  /* ==========================================================
+     SETTINGS TAB
+     ========================================================== */
 
-  const [profileForm, setProfileForm] = useState({
+  const [
+    tab,
+    setTab,
+  ] = useState<SettingsTab>(
+    "profile"
+  );
+
+  /* ==========================================================
+     PROFILE FORM
+     ========================================================== */
+
+  const [
+    profileForm,
+    setProfileForm,
+  ] = useState({
     full_name: "",
     email: "",
     phone: "",
   });
 
-  const [orgForm, setOrgForm] = useState({
+  /* ==========================================================
+     ORGANIZATION FORM
+     ========================================================== */
+
+  const [
+    orgForm,
+    setOrgForm,
+  ] = useState({
     name: "",
     owner_upi_id: "",
   });
 
-  const [passwordForm, setPasswordForm] = useState({
+  /* ==========================================================
+     PASSWORD FORM
+     ========================================================== */
+
+  const [
+    passwordForm,
+    setPasswordForm,
+  ] = useState({
     password: "",
     confirm: "",
   });
 
-  const [submitting, setSubmitting] =
-    useState(false);
+  /* ==========================================================
+     SUBMITTING
+     ========================================================== */
 
-  const [toast, setToast] = useState<{
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
+
+  /* ==========================================================
+     TOAST
+     ========================================================== */
+
+  const [
+    toast,
+    setToast,
+  ] = useState<{
     msg: string;
-    type: "success" | "error";
+    type:
+      | "success"
+      | "error";
   } | null>(null);
 
-  const mobileNavOptions = getMobileNavItems(profile);
-  const [mobileNav, setMobileNav] = useState<string[]>(() => getSavedMobileNav(profile, user?.id));
+  /* ==========================================================
+     MOBILE NAVIGATION
+     ========================================================== */
+
+  const mobileNavOptions =
+    getMobileNavItems(
+      profile
+    );
+
+  const [
+    mobileNav,
+    setMobileNav,
+  ] = useState<
+    string[]
+  >(
+    () =>
+      getSavedMobileNav(
+        profile,
+        user?.id
+      )
+  );
+
+  const [
+    mobileNavEnabled,
+    setMobileNavEnabled,
+  ] = useState<boolean>(
+    () =>
+      getMobileNavEnabled(
+        user?.id
+      )
+  );
 
   useEffect(() => {
-    setMobileNav(getSavedMobileNav(profile, user?.id));
-  }, [profile?.role, user?.id]);
+    setMobileNav(
+      getSavedMobileNav(
+        profile,
+        user?.id
+      )
+    );
+  }, [
+    profile?.role,
+    user?.id,
+  ]);
 
-  function updateMobileNav(index: number, value: string) {
-    setMobileNav((current) => {
-      const next = [...current];
-      const duplicateIndex = next.findIndex((item, itemIndex) => item === value && itemIndex !== index);
-      if (duplicateIndex >= 0) {
-        next[duplicateIndex] = next[index];
+  useEffect(() => {
+    setMobileNavEnabled(
+      getMobileNavEnabled(
+        user?.id
+      )
+    );
+  }, [user?.id]);
+
+  function updateMobileNav(
+    index: number,
+    value: string
+  ) {
+    setMobileNav(
+      (current) => {
+        const next = [
+          ...current,
+        ];
+
+        const duplicateIndex =
+          next.findIndex(
+            (
+              item,
+              itemIndex
+            ) =>
+              item ===
+                value &&
+              itemIndex !==
+                index
+          );
+
+        if (
+          duplicateIndex >=
+          0
+        ) {
+          next[
+            duplicateIndex
+          ] =
+            next[
+              index
+            ];
+        }
+
+        next[index] =
+          value;
+
+        return next;
       }
-      next[index] = value;
-      return next;
-    });
+    );
   }
 
   function saveMobileNavigation() {
-    saveMobileNav(user?.id, mobileNav);
-    setToast({ msg: "Mobile navigation updated.", type: "success" });
+    saveMobileNav(
+      user?.id,
+      mobileNav
+    );
+
+    setToast({
+      msg:
+        "Mobile navigation updated.",
+      type: "success",
+    });
   }
+
+  function toggleMobileNavigation() {
+    const next =
+      !mobileNavEnabled;
+
+    setMobileNavEnabled(
+      next
+    );
+
+    saveMobileNavEnabled(
+      user?.id,
+      next
+    );
+
+    setToast({
+      msg: next
+        ? "Mobile bottom navigation enabled."
+        : "Mobile bottom navigation disabled.",
+      type: "success",
+    });
+  }
+
+  /* ==========================================================
+     ROLE
+     ========================================================== */
 
   const [
     showRoleModal,
@@ -185,13 +376,18 @@ export default function SettingsPage() {
     selectedRole,
     setSelectedRole,
   ] = useState<UserRole>(
-    profile?.role || "OWNER"
+    profile?.role ||
+      "OWNER"
   );
 
   const [
     roleConfirmError,
     setRoleConfirmError,
   ] = useState("");
+
+  /* ==========================================================
+     THEME EFFECT
+     ========================================================== */
 
   useEffect(() => {
     document.documentElement.classList.toggle(
@@ -205,6 +401,10 @@ export default function SettingsPage() {
     );
   }, [theme]);
 
+  /* ==========================================================
+     PUSH NOTIFICATION EFFECT
+     ========================================================== */
+
   useEffect(() => {
     let cancelled = false;
 
@@ -212,7 +412,8 @@ export default function SettingsPage() {
       if (
         !isPushSupported() ||
         !("Notification" in window) ||
-        Notification.permission !== "granted"
+        Notification.permission !==
+          "granted"
       ) {
         return;
       }
@@ -223,7 +424,9 @@ export default function SettingsPage() {
 
         if (!cancelled) {
           setDeviceNotifications(
-            Boolean(subscription)
+            Boolean(
+              subscription
+            )
           );
         }
       } catch {
@@ -236,6 +439,10 @@ export default function SettingsPage() {
     };
   }, [user?.id]);
 
+  /* ==========================================================
+     PROFILE LOAD
+     ========================================================== */
+
   useEffect(() => {
     if (!profile && !user) {
       return;
@@ -243,7 +450,8 @@ export default function SettingsPage() {
 
     setProfileForm({
       full_name:
-        profile?.full_name || "",
+        profile?.full_name ||
+        "",
       email:
         profile?.email ||
         user?.email ||
@@ -259,10 +467,19 @@ export default function SettingsPage() {
         profile.role as UserRole
       );
     }
-  }, [profile, user]);
+  }, [
+    profile,
+    user,
+  ]);
+
+  /* ==========================================================
+     ORGANIZATION LOAD
+     ========================================================== */
 
   useEffect(() => {
-    if (!profile?.organization_id) {
+    if (
+      !profile?.organization_id
+    ) {
       setOrgForm({
         name: "",
         owner_upi_id: "",
@@ -275,43 +492,63 @@ export default function SettingsPage() {
 
     supabase
       .from("organizations")
-      .select("name, owner_upi_id")
+      .select(
+        "name, owner_upi_id"
+      )
       .eq(
         "id",
         profile.organization_id
       )
       .maybeSingle()
-      .then(({ data, error }) => {
-        if (!mounted) {
-          return;
-        }
+      .then(
+        ({
+          data,
+          error,
+        }) => {
+          if (!mounted) {
+            return;
+          }
 
-        if (error) {
-          console.error(
-            "Organization load error:",
-            error
-          );
-          return;
-        }
+          if (error) {
+            console.error(
+              "Organization load error:",
+              error
+            );
+            return;
+          }
 
-        setOrgForm({
-          name: data?.name || "",
-          owner_upi_id:
-            data?.owner_upi_id || "",
-        });
-      });
+          setOrgForm({
+            name:
+              data?.name ||
+              "",
+            owner_upi_id:
+              data?.owner_upi_id ||
+              "",
+          });
+        }
+      );
 
     return () => {
       mounted = false;
     };
-  }, [profile?.organization_id]);
+  }, [
+    profile?.organization_id,
+  ]);
+
+  /* ==========================================================
+     LOAD ARCHIVED
+     ========================================================== */
 
   async function loadArchived() {
-    if (!profile?.organization_id) {
+    if (
+      !profile?.organization_id
+    ) {
       return;
     }
 
-    setArchivedLoading(true);
+    setArchivedLoading(
+      true
+    );
 
     try {
       const [
@@ -321,214 +558,277 @@ export default function SettingsPage() {
         maintenance,
         announcements,
         conversations,
-      ] = await Promise.all([
-        supabase
-          .from("properties")
-          .select(
-            "id,name,archived_at"
-          )
-          .eq(
-            "organization_id",
-            profile.organization_id
-          )
-          .not(
-            "archived_at",
-            "is",
-            null
-          )
-          .order("archived_at", {
-            ascending: false,
-          }),
+      ] =
+        await Promise.all(
+          [
+            supabase
+              .from(
+                "properties"
+              )
+              .select(
+                "id,name,archived_at"
+              )
+              .eq(
+                "organization_id",
+                profile.organization_id
+              )
+              .not(
+                "archived_at",
+                "is",
+                null
+              )
+              .order(
+                "archived_at",
+                {
+                  ascending:
+                    false,
+                }
+              ),
 
-        supabase
-          .from("units")
-          .select(
-            "id,unit_number,archived_at"
-          )
-          .eq(
-            "organization_id",
-            profile.organization_id
-          )
-          .not(
-            "archived_at",
-            "is",
-            null
-          )
-          .order("archived_at", {
-            ascending: false,
-          }),
+            supabase
+              .from("units")
+              .select(
+                "id,unit_number,archived_at"
+              )
+              .eq(
+                "organization_id",
+                profile.organization_id
+              )
+              .not(
+                "archived_at",
+                "is",
+                null
+              )
+              .order(
+                "archived_at",
+                {
+                  ascending:
+                    false,
+                }
+              ),
 
-        supabase
-          .from("tenants")
-          .select(
-            "id,full_name,archived_at"
-          )
-          .eq(
-            "organization_id",
-            profile.organization_id
-          )
-          .not(
-            "archived_at",
-            "is",
-            null
-          )
-          .order("archived_at", {
-            ascending: false,
-          }),
+            supabase
+              .from(
+                "tenants"
+              )
+              .select(
+                "id,full_name,archived_at"
+              )
+              .eq(
+                "organization_id",
+                profile.organization_id
+              )
+              .not(
+                "archived_at",
+                "is",
+                null
+              )
+              .order(
+                "archived_at",
+                {
+                  ascending:
+                    false,
+                }
+              ),
 
-        supabase
-          .from("maintenance_requests")
-          .select(
-            "id,title,archived_at"
-          )
-          .eq(
-            "organization_id",
-            profile.organization_id
-          )
-          .not(
-            "archived_at",
-            "is",
-            null
-          )
-          .order("archived_at", {
-            ascending: false,
-          }),
+            supabase
+              .from(
+                "maintenance_requests"
+              )
+              .select(
+                "id,title,archived_at"
+              )
+              .eq(
+                "organization_id",
+                profile.organization_id
+              )
+              .not(
+                "archived_at",
+                "is",
+                null
+              )
+              .order(
+                "archived_at",
+                {
+                  ascending:
+                    false,
+                }
+              ),
 
-        supabase
-          .from(
-            "community_announcements"
-          )
-          .select(
-            "id,title,archived_at"
-          )
-          .eq(
-            "organization_id",
-            profile.organization_id
-          )
-          .not(
-            "archived_at",
-            "is",
-            null
-          )
-          .order("archived_at", {
-            ascending: false,
-          }),
+            supabase
+              .from(
+                "community_announcements"
+              )
+              .select(
+                "id,title,archived_at"
+              )
+              .eq(
+                "organization_id",
+                profile.organization_id
+              )
+              .not(
+                "archived_at",
+                "is",
+                null
+              )
+              .order(
+                "archived_at",
+                {
+                  ascending:
+                    false,
+                }
+              ),
 
-        supabase
-          .from("conversations")
-          .select(
-            "id,title,archived_at"
-          )
-          .eq(
-            "organization_id",
-            profile.organization_id
-          )
-          .not(
-            "archived_at",
-            "is",
-            null
-          )
-          .order("archived_at", {
-            ascending: false,
-          }),
-      ]);
+            supabase
+              .from(
+                "conversations"
+              )
+              .select(
+                "id,title,archived_at"
+              )
+              .eq(
+                "organization_id",
+                profile.organization_id
+              )
+              .not(
+                "archived_at",
+                "is",
+                null
+              )
+              .order(
+                "archived_at",
+                {
+                  ascending:
+                    false,
+                }
+              ),
+          ]
+        );
 
-      const items: ArchivedItem[] = [
-        ...(props.data || []).map(
-          (x: any) => ({
-            type: "properties",
-            id: x.id,
-            name: x.name,
-            archived_at:
-              x.archived_at,
-          })
-        ),
+      const items: ArchivedItem[] =
+        [
+          ...(props.data ||
+            []).map(
+            (x: any) => ({
+              type:
+                "properties",
+              id: x.id,
+              name: x.name,
+              archived_at:
+                x.archived_at,
+            })
+          ),
 
-        ...(units.data || []).map(
-          (x: any) => ({
-            type: "units",
-            id: x.id,
-            name: `Unit ${x.unit_number}`,
-            archived_at:
-              x.archived_at,
-          })
-        ),
+          ...(units.data ||
+            []).map(
+            (x: any) => ({
+              type:
+                "units",
+              id: x.id,
+              name: `Unit ${x.unit_number}`,
+              archived_at:
+                x.archived_at,
+            })
+          ),
 
-        ...(tenants.data || []).map(
-          (x: any) => ({
-            type: "tenants",
-            id: x.id,
-            name: x.full_name,
-            archived_at:
-              x.archived_at,
-          })
-        ),
+          ...(tenants.data ||
+            []).map(
+            (x: any) => ({
+              type:
+                "tenants",
+              id: x.id,
+              name:
+                x.full_name,
+              archived_at:
+                x.archived_at,
+            })
+          ),
 
-        ...(maintenance.data || []).map(
-          (x: any) => ({
-            type: "maintenance_requests",
-            id: x.id,
-            name: x.title,
-            archived_at:
-              x.archived_at,
-          })
-        ),
+          ...(maintenance.data ||
+            []).map(
+            (x: any) => ({
+              type:
+                "maintenance_requests",
+              id: x.id,
+              name: x.title,
+              archived_at:
+                x.archived_at,
+            })
+          ),
 
-        ...(announcements.data || []).map(
-          (x: any) => ({
-            type:
-              "community_announcements",
-            id: x.id,
-            name: x.title,
-            archived_at:
-              x.archived_at,
-          })
-        ),
+          ...(announcements.data ||
+            []).map(
+            (x: any) => ({
+              type:
+                "community_announcements",
+              id: x.id,
+              name: x.title,
+              archived_at:
+                x.archived_at,
+            })
+          ),
 
-        ...(conversations.data || []).map(
-          (x: any) => ({
-            type: "conversations",
-            id: x.id,
-            name:
-              x.title ||
-              "Conversation",
-            archived_at:
-              x.archived_at,
-          })
-        ),
-      ];
+          ...(conversations.data ||
+            []).map(
+            (x: any) => ({
+              type:
+                "conversations",
+              id: x.id,
+              name:
+                x.title ||
+                "Conversation",
+              archived_at:
+                x.archived_at,
+            })
+          ),
+        ];
 
-      setArchivedItems(items);
+      setArchivedItems(
+        items
+      );
     } finally {
-      setArchivedLoading(false);
+      setArchivedLoading(
+        false
+      );
     }
   }
 
   async function openArchived() {
-    setShowArchived(true);
+    setShowArchived(
+      true
+    );
+
     await loadArchived();
   }
 
   function toggleArchivedSelection(
     key: string
   ) {
-    setSelectedArchived((prev) =>
-      prev.includes(key)
-        ? prev.filter(
-            (item) => item !== key
-          )
-        : [...prev, key]
+    setSelectedArchived(
+      (prev) =>
+        prev.includes(key)
+          ? prev.filter(
+              (item) =>
+                item !== key
+            )
+          : [
+              ...prev,
+              key,
+            ]
     );
   }
 
   async function deleteSelectedArchived() {
-    if (!selectedArchived.length) {
+    if (
+      !selectedArchived.length
+    ) {
       return;
     }
 
-    const confirmed = await appConfirm(
-      `Permanently delete ${selectedArchived.length} archived item(s)? This cannot be undone.`
-    );
+    const confirmed =
+      await appConfirm(
+        `Permanently delete ${selectedArchived.length} archived item(s)? This cannot be undone.`
+      );
 
     if (!confirmed) {
       return;
@@ -540,30 +840,39 @@ export default function SettingsPage() {
     > = {};
 
     for (const key of selectedArchived) {
-      const split = key.indexOf(":");
+      const split =
+        key.indexOf(":");
 
-      const type = key.slice(
-        0,
-        split
-      );
+      const type =
+        key.slice(
+          0,
+          split
+        );
 
-      const id = key.slice(
-        split + 1
-      );
+      const id =
+        key.slice(
+          split + 1
+        );
 
-      (grouped[type] ||= []).push(
-        id
-      );
+      (
+        grouped[type] ||= []
+      ).push(id);
     }
 
-    for (const [table, ids] of Object.entries(
+    for (const [
+      table,
+      ids,
+    ] of Object.entries(
       grouped
     )) {
       const { error } =
         await supabase
           .from(table)
           .delete()
-          .in("id", ids);
+          .in(
+            "id",
+            ids
+          );
 
       if (error) {
         setToast({
@@ -575,15 +884,22 @@ export default function SettingsPage() {
       }
     }
 
-    setSelectedArchived([]);
+    setSelectedArchived(
+      []
+    );
 
     await loadArchived();
 
     setToast({
-      msg: "Archived items permanently deleted.",
+      msg:
+        "Archived items permanently deleted.",
       type: "success",
     });
   }
+
+  /* ==========================================================
+     DEVICE NOTIFICATIONS
+     ========================================================== */
 
   async function toggleDeviceNotifications() {
     if (
@@ -593,34 +909,49 @@ export default function SettingsPage() {
       return;
     }
 
-    setNotificationBusy(true);
+    setNotificationBusy(
+      true
+    );
 
     try {
-      if (deviceNotifications) {
+      if (
+        deviceNotifications
+      ) {
         await disableDevicePush(
           user.id
         );
 
-        setDeviceNotifications(false);
+        setDeviceNotifications(
+          false
+        );
       } else {
         await enableDevicePush(
           user.id
         );
 
-        setDeviceNotifications(true);
+        setDeviceNotifications(
+          true
+        );
       }
     } catch (error) {
       setToast({
         msg:
-          error instanceof Error
+          error instanceof
+          Error
             ? error.message
             : "Unable to update device notifications.",
         type: "error",
       });
     } finally {
-      setNotificationBusy(false);
+      setNotificationBusy(
+        false
+      );
     }
   }
+
+  /* ==========================================================
+     SAVE PROFILE
+     ========================================================== */
 
   async function saveProfile(
     e: React.FormEvent
@@ -629,7 +960,8 @@ export default function SettingsPage() {
 
     if (!user) {
       setToast({
-        msg: "You are not signed in.",
+        msg:
+          "You are not signed in.",
         type: "error",
       });
 
@@ -715,7 +1047,8 @@ export default function SettingsPage() {
       } = {};
 
       if (
-        newEmail !== previousEmail
+        newEmail !==
+        previousEmail
       ) {
         authUpdates.email =
           newEmail;
@@ -730,11 +1063,13 @@ export default function SettingsPage() {
       }
 
       if (
-        Object.keys(authUpdates)
-          .length > 0
+        Object.keys(
+          authUpdates
+        ).length > 0
       ) {
         const {
-          error: authError,
+          error:
+            authError,
         } =
           await supabase.auth.updateUser(
             authUpdates
@@ -748,7 +1083,8 @@ export default function SettingsPage() {
       }
 
       const {
-        error: profileError,
+        error:
+          profileError,
       } =
         await supabase
           .from("profiles")
@@ -825,7 +1161,8 @@ export default function SettingsPage() {
       });
 
       setToast({
-        msg: "Profile updated successfully.",
+        msg:
+          "Profile updated successfully.",
         type: "success",
       });
     } catch (err) {
@@ -836,15 +1173,22 @@ export default function SettingsPage() {
 
       setToast({
         msg:
-          err instanceof Error
+          err instanceof
+          Error
             ? err.message
             : "Unable to update your profile.",
         type: "error",
       });
     } finally {
-      setSubmitting(false);
+      setSubmitting(
+        false
+      );
     }
   }
+
+  /* ==========================================================
+     SAVE ORGANIZATION
+     ========================================================== */
 
   async function saveOrg(
     e: React.FormEvent
@@ -878,13 +1222,16 @@ export default function SettingsPage() {
 
       const organizationUpdate: {
         name: string;
-        owner_upi_id?: string | null;
+        owner_upi_id?:
+          | string
+          | null;
       } = {
         name,
       };
 
       if (
-        profile.role === "OWNER"
+        profile.role ===
+        "OWNER"
       ) {
         organizationUpdate.owner_upi_id =
           orgForm.owner_upi_id.trim() ||
@@ -895,7 +1242,9 @@ export default function SettingsPage() {
         error,
       } =
         await supabase
-          .from("organizations")
+          .from(
+            "organizations"
+          )
           .update(
             organizationUpdate
           )
@@ -911,21 +1260,29 @@ export default function SettingsPage() {
       }
 
       setToast({
-        msg: "Organization updated!",
+        msg:
+          "Organization updated!",
         type: "success",
       });
     } catch (err) {
       setToast({
         msg:
-          err instanceof Error
+          err instanceof
+          Error
             ? err.message
             : "Unable to update organization.",
         type: "error",
       });
     } finally {
-      setSubmitting(false);
+      setSubmitting(
+        false
+      );
     }
   }
+
+  /* ==========================================================
+     PASSWORD
+     ========================================================== */
 
   async function changePassword(
     e: React.FormEvent
@@ -935,8 +1292,8 @@ export default function SettingsPage() {
     setToast(null);
 
     if (
-      passwordForm.password.length <
-      6
+      passwordForm.password
+        .length < 6
     ) {
       setToast({
         msg:
@@ -952,7 +1309,8 @@ export default function SettingsPage() {
       passwordForm.confirm
     ) {
       setToast({
-        msg: "Passwords do not match.",
+        msg:
+          "Passwords do not match.",
         type: "error",
       });
 
@@ -991,15 +1349,22 @@ export default function SettingsPage() {
     } catch (err) {
       setToast({
         msg:
-          err instanceof Error
+          err instanceof
+          Error
             ? err.message
             : "Unable to update password.",
         type: "error",
       });
     } finally {
-      setSubmitting(false);
+      setSubmitting(
+        false
+      );
     }
   }
+
+  /* ==========================================================
+     ROLE CHANGE
+     ========================================================== */
 
   async function confirmRoleChange() {
     if (!user || !profile) {
@@ -1010,12 +1375,17 @@ export default function SettingsPage() {
       selectedRole ===
       profile.role
     ) {
-      setShowRoleModal(false);
+      setShowRoleModal(
+        false
+      );
+
       return;
     }
 
     setSubmitting(true);
-    setRoleConfirmError("");
+    setRoleConfirmError(
+      ""
+    );
 
     try {
       const {
@@ -1042,7 +1412,9 @@ export default function SettingsPage() {
 
       await refreshProfile();
 
-      setShowRoleModal(false);
+      setShowRoleModal(
+        false
+      );
 
       setToast({
         msg: `Role changed to ${
@@ -1057,14 +1429,21 @@ export default function SettingsPage() {
       });
     } catch (err) {
       setRoleConfirmError(
-        err instanceof Error
+        err instanceof
+        Error
           ? err.message
           : "Unable to change role."
       );
     } finally {
-      setSubmitting(false);
+      setSubmitting(
+        false
+      );
     }
   }
+
+  /* ==========================================================
+     SETTINGS TABS
+     ========================================================== */
 
   const tabs: {
     id: SettingsTab;
@@ -1074,14 +1453,18 @@ export default function SettingsPage() {
     {
       id: "profile",
       label: "Profile",
-      icon: <User size={15} />,
+      icon: (
+        <User size={15} />
+      ),
     },
 
-    ...(profile?.role === "OWNER"
+    ...(profile?.role ===
+    "OWNER"
       ? [
           {
             id: "org" as SettingsTab,
-            label: "Organization",
+            label:
+              "Organization",
             icon: (
               <Building2
                 size={15}
@@ -1112,37 +1495,49 @@ export default function SettingsPage() {
       {/* ====================================================== */}
 
       <div className="grid grid-cols-3 gap-1 bg-navy-800 border border-navy-700 rounded-xl p-1 mb-6 w-full min-w-0">
-        {tabs.map((tabItem) => (
-          <button
-            key={tabItem.id}
-            type="button"
-            onClick={() =>
-              setTab(
+        {tabs.map(
+          (
+            tabItem
+          ) => (
+            <button
+              key={
                 tabItem.id
-              )
-            }
-            className={`min-w-0 w-full flex items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-lg text-[11px] sm:text-sm font-semibold font-display transition-all ${
-              tab === tabItem.id
-                ? "bg-navy-700 text-white"
-                : "text-navy-400 hover:text-navy-200"
-            }`}
-          >
-            <span className="flex-shrink-0">
-              {tabItem.icon}
-            </span>
+              }
+              type="button"
+              onClick={() =>
+                setTab(
+                  tabItem.id
+                )
+              }
+              className={`min-w-0 w-full flex items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-lg text-[11px] sm:text-sm font-semibold font-display transition-all ${
+                tab ===
+                tabItem.id
+                  ? "bg-navy-700 text-white"
+                  : "text-navy-400 hover:text-navy-200"
+              }`}
+            >
+              <span className="flex-shrink-0">
+                {
+                  tabItem.icon
+                }
+              </span>
 
-            <span className="truncate">
-              {tabItem.label}
-            </span>
-          </button>
-        ))}
+              <span className="truncate">
+                {
+                  tabItem.label
+                }
+              </span>
+            </button>
+          )
+        )}
       </div>
 
       {/* ====================================================== */}
       {/* PROFILE                                               */}
       {/* ====================================================== */}
 
-      {tab === "profile" && (
+      {tab ===
+        "profile" && (
         <Card>
           <h2 className="font-display font-bold text-white mb-5 flex items-center gap-2">
             <User size={18} />
@@ -1150,7 +1545,9 @@ export default function SettingsPage() {
           </h2>
 
           <form
-            onSubmit={saveProfile}
+            onSubmit={
+              saveProfile
+            }
             className="flex flex-col gap-4"
           >
             <div className="flex items-center gap-4 mb-2">
@@ -1161,7 +1558,9 @@ export default function SettingsPage() {
                     "U"
                   )
                     .trim()
-                    .charAt(0)
+                    .charAt(
+                      0
+                    )
                     .toUpperCase()}
                 </span>
               </div>
@@ -1189,12 +1588,18 @@ export default function SettingsPage() {
               value={
                 profileForm.full_name
               }
-              onChange={(e) =>
+              onChange={(
+                e
+              ) =>
                 setProfileForm(
-                  (current) => ({
+                  (
+                    current
+                  ) => ({
                     ...current,
                     full_name:
-                      e.target.value,
+                      e
+                        .target
+                        .value,
                   })
                 )
               }
@@ -1211,12 +1616,18 @@ export default function SettingsPage() {
                 value={
                   profileForm.email
                 }
-                onChange={(e) =>
+                onChange={(
+                  e
+                ) =>
                   setProfileForm(
-                    (current) => ({
+                    (
+                      current
+                    ) => ({
                       ...current,
                       email:
-                        e.target.value,
+                        e
+                          .target
+                          .value,
                     })
                   )
                 }
@@ -1235,12 +1646,18 @@ export default function SettingsPage() {
                 value={
                   profileForm.phone
                 }
-                onChange={(e) =>
+                onChange={(
+                  e
+                ) =>
                   setProfileForm(
-                    (current) => ({
+                    (
+                      current
+                    ) => ({
                       ...current,
                       phone:
-                        e.target.value,
+                        e
+                          .target
+                          .value,
                     })
                   )
                 }
@@ -1251,7 +1668,9 @@ export default function SettingsPage() {
               "TENANT" && (
               <Button
                 type="submit"
-                loading={submitting}
+                loading={
+                  submitting
+                }
                 className="self-start"
               >
                 Save changes
@@ -1261,12 +1680,18 @@ export default function SettingsPage() {
             {profile?.role ===
               "TENANT" && (
               <p className="text-xs text-navy-500">
-                Your name, email and
-                phone are managed by
-                the property owner.
-                Emergency contact
-                details can be changed
-                from Dashboard.
+                Your name,
+                email and
+                phone are
+                managed by
+                the property
+                owner.
+                Emergency
+                contact
+                details can
+                be changed
+                from
+                Dashboard.
               </p>
             )}
           </form>
@@ -1277,45 +1702,202 @@ export default function SettingsPage() {
       {/* MOBILE NAVIGATION                                    */}
       {/* ====================================================== */}
 
-      {tab === "profile" && (
+      {tab ===
+        "profile" && (
         <Card className="mt-5 overflow-hidden">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0">
-              <Smartphone size={19} />
+              <Smartphone
+                size={19}
+              />
             </div>
+
             <div className="min-w-0">
               <h2 className="font-display font-bold text-white flex items-center gap-2">
                 Mobile navigation
               </h2>
+
               <p className="text-xs text-navy-500 mt-1 leading-relaxed">
-                Choose the 4 shortcuts shown in the bottom navigation on phones. These settings stay on this device.
+                Choose the 4
+                shortcuts shown
+                in the bottom
+                navigation on
+                phones. These
+                settings stay
+                on this device.
               </p>
             </div>
           </div>
 
-          <div className="grid gap-3">
-            {Array.from({ length: MOBILE_NAV_COUNT }).map((_, index) => (
-              <div key={index} className="flex items-center gap-3 rounded-2xl border border-navy-700 bg-navy-900/55 px-3 py-3">
-                <div className="w-8 h-8 rounded-lg bg-navy-800 flex items-center justify-center text-navy-500 flex-shrink-0">
-                  <GripVertical size={16} />
-                </div>
-                <div className="text-[11px] font-mono text-navy-500 w-5 flex-shrink-0">{index + 1}</div>
-                <Select
-                  aria-label={`Mobile navigation option ${index + 1}`}
-                  value={mobileNav[index] || mobileNavOptions[index]?.to || mobileNavOptions[0]?.to || ""}
-                  onChange={(e) => updateMobileNav(index, e.target.value)}
-                  options={mobileNavOptions.map((item) => ({ value: item.to, label: item.label }))}
-                  className="flex-1"
-                />
-              </div>
-            ))}
+          {/* ==================================================
+              ON / OFF TOGGLE
+              ================================================== */}
+
+          <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-navy-700 bg-navy-900/55 px-4 py-4">
+            <div className="min-w-0">
+              <h3 className="font-display font-semibold text-white">
+                Show bottom navigation
+              </h3>
+
+              <p className="text-xs text-navy-500 mt-1">
+                Turn the mobile
+                bottom navigation
+                bar on or off.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={
+                mobileNavEnabled
+              }
+              aria-label="Show bottom navigation"
+              onClick={
+                toggleMobileNavigation
+              }
+              className={`relative h-7 w-12 shrink-0 rounded-full transition-all duration-300 ${
+                mobileNavEnabled
+                  ? "bg-blue-600 shadow-lg shadow-blue-600/25"
+                  : "bg-slate-600/60"
+              }`}
+            >
+              <span
+                className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-300 ${
+                  mobileNavEnabled
+                    ? "left-6"
+                    : "left-1"
+                }`}
+              />
+            </button>
           </div>
+
+          {/* ==================================================
+              STATUS
+              ================================================== */}
+
+          <div
+            className={`mb-5 flex items-center gap-2 text-xs font-medium ${
+              mobileNavEnabled
+                ? "text-emerald-400"
+                : "text-slate-500"
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                mobileNavEnabled
+                  ? "bg-emerald-400"
+                  : "bg-slate-500"
+              }`}
+            />
+
+            {mobileNavEnabled
+              ? "Bottom navigation is enabled"
+              : "Bottom navigation is disabled"}
+          </div>
+
+          {/* ==================================================
+              FOUR NAVIGATION OPTIONS
+              ================================================== */}
+
+          <div
+            className={`grid gap-3 transition-opacity duration-300 ${
+              mobileNavEnabled
+                ? "opacity-100"
+                : "opacity-45"
+            }`}
+          >
+            {Array.from({
+              length:
+                MOBILE_NAV_COUNT,
+            }).map(
+              (
+                _,
+                index
+              ) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 rounded-2xl border border-navy-700 bg-navy-900/55 px-3 py-3"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-navy-800 flex items-center justify-center text-navy-500 flex-shrink-0">
+                    <GripVertical
+                      size={
+                        16
+                      }
+                    />
+                  </div>
+
+                  <div className="text-[11px] font-mono text-navy-500 w-5 flex-shrink-0">
+                    {index + 1}
+                  </div>
+
+                  <Select
+                    aria-label={`Mobile navigation option ${
+                      index +
+                      1
+                    }`}
+                    value={
+                      mobileNav[
+                        index
+                      ] ||
+                      mobileNavOptions[
+                        index
+                      ]?.to ||
+                      mobileNavOptions[
+                        0
+                      ]?.to ||
+                      ""
+                    }
+                    onChange={(
+                      e
+                    ) =>
+                      updateMobileNav(
+                        index,
+                        e
+                          .target
+                          .value
+                      )
+                    }
+                    options={mobileNavOptions.map(
+                      (
+                        item
+                      ) => ({
+                        value:
+                          item.to,
+                        label:
+                          item.label,
+                      })
+                    )}
+                    className="flex-1"
+                    disabled={
+                      !mobileNavEnabled
+                    }
+                  />
+                </div>
+              )
+            )}
+          </div>
+
+          {/* ==================================================
+              SAVE
+              ================================================== */}
 
           <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-blue-500/5 border border-blue-500/10 px-3 py-3">
             <div className="text-[11px] text-navy-500">
-              Desktop sidebar stays unchanged.
+              Desktop sidebar
+              stays unchanged.
             </div>
-            <Button type="button" onClick={saveMobileNavigation} className="flex-shrink-0">
+
+            <Button
+              type="button"
+              onClick={
+                saveMobileNavigation
+              }
+              className="flex-shrink-0"
+              disabled={
+                !mobileNavEnabled
+              }
+            >
               Save navigation
             </Button>
           </div>
@@ -1329,14 +1911,17 @@ export default function SettingsPage() {
       {tab === "org" && (
         <Card>
           <h2 className="font-display font-bold text-white mb-4 flex items-center gap-2">
-            <Building2 size={18} />
+            <Building2
+              size={18}
+            />
             Organization
           </h2>
 
           {!profile?.organization_id ? (
             <div className="text-sm text-navy-500 py-4 text-center">
-              No organization linked
-              to your account.
+              No organization
+              linked to your
+              account.
             </div>
           ) : (
             <form
@@ -1348,10 +1933,14 @@ export default function SettingsPage() {
                 value={
                   orgForm.name
                 }
-                onChange={(e) =>
+                onChange={(
+                  e
+                ) =>
                   setOrgForm({
                     name:
-                      e.target.value,
+                      e
+                        .target
+                        .value,
                     owner_upi_id:
                       orgForm.owner_upi_id,
                   })
@@ -1366,12 +1955,18 @@ export default function SettingsPage() {
                     value={
                       orgForm.owner_upi_id
                     }
-                    onChange={(e) =>
+                    onChange={(
+                      e
+                    ) =>
                       setOrgForm(
-                        (current) => ({
+                        (
+                          current
+                        ) => ({
                           ...current,
                           owner_upi_id:
-                            e.target.value,
+                            e
+                              .target
+                              .value,
                         })
                       )
                     }
@@ -1390,7 +1985,9 @@ export default function SettingsPage() {
 
               <Button
                 type="submit"
-                loading={submitting}
+                loading={
+                  submitting
+                }
                 className="self-start"
               >
                 Save
@@ -1404,7 +2001,8 @@ export default function SettingsPage() {
       {/* SECURITY                                              */}
       {/* ====================================================== */}
 
-      {tab === "security" && (
+      {tab ===
+        "security" && (
         <Card>
           <h2 className="font-display font-bold text-white mb-4 flex items-center gap-2">
             <Shield size={18} />
@@ -1412,7 +2010,9 @@ export default function SettingsPage() {
           </h2>
 
           <form
-            onSubmit={changePassword}
+            onSubmit={
+              changePassword
+            }
             className="flex flex-col gap-4"
           >
             <Input
@@ -1421,12 +2021,18 @@ export default function SettingsPage() {
               value={
                 passwordForm.password
               }
-              onChange={(e) =>
+              onChange={(
+                e
+              ) =>
                 setPasswordForm(
-                  (current) => ({
+                  (
+                    current
+                  ) => ({
                     ...current,
                     password:
-                      e.target.value,
+                      e
+                        .target
+                        .value,
                   })
                 )
               }
@@ -1439,12 +2045,18 @@ export default function SettingsPage() {
               value={
                 passwordForm.confirm
               }
-              onChange={(e) =>
+              onChange={(
+                e
+              ) =>
                 setPasswordForm(
-                  (current) => ({
+                  (
+                    current
+                  ) => ({
                     ...current,
                     confirm:
-                      e.target.value,
+                      e
+                        .target
+                        .value,
                   })
                 )
               }
@@ -1452,7 +2064,9 @@ export default function SettingsPage() {
 
             <Button
               type="submit"
-              loading={submitting}
+              loading={
+                submitting
+              }
               className="self-start"
             >
               Change password
@@ -1465,7 +2079,8 @@ export default function SettingsPage() {
       {/* PROFILE EXTRA CARDS                                   */}
       {/* ====================================================== */}
 
-      {tab === "profile" && (
+      {tab ===
+        "profile" && (
         <div className="space-y-4 mt-4">
           {/* Device notifications */}
           <Card>
@@ -1476,8 +2091,9 @@ export default function SettingsPage() {
                 </h3>
 
                 <p className="text-xs text-navy-500 mt-1">
-                  Show RENFLIX alerts as
-                  device notifications.
+                  Show RENFLIX
+                  alerts as device
+                  notifications.
                 </p>
               </div>
 
@@ -1517,7 +2133,8 @@ export default function SettingsPage() {
                 </div>
 
                 <p className="text-xs text-navy-500 mt-1">
-                  Choose the RENFLIX theme.
+                  Choose the RENFLIX
+                  theme.
                 </p>
               </div>
 
@@ -1525,12 +2142,15 @@ export default function SettingsPage() {
                 <Button
                   size="sm"
                   variant={
-                    theme === "light"
+                    theme ===
+                    "light"
                       ? "primary"
                       : "secondary"
                   }
                   onClick={() =>
-                    setTheme("light")
+                    setTheme(
+                      "light"
+                    )
                   }
                 >
                   Light
@@ -1539,12 +2159,15 @@ export default function SettingsPage() {
                 <Button
                   size="sm"
                   variant={
-                    theme === "dark"
+                    theme ===
+                    "dark"
                       ? "primary"
                       : "secondary"
                   }
                   onClick={() =>
-                    setTheme("dark")
+                    setTheme(
+                      "dark"
+                    )
                   }
                 >
                   Dark
@@ -1558,7 +2181,9 @@ export default function SettingsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
                 <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-400/15 text-amber-300 flex items-center justify-center flex-shrink-0">
-                  <Archive size={19} />
+                  <Archive
+                    size={19}
+                  />
                 </div>
 
                 <div className="min-w-0">
@@ -1577,10 +2202,14 @@ export default function SettingsPage() {
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={openArchived}
+                onClick={
+                  openArchived
+                }
                 className="shrink-0 self-stretch sm:self-auto"
               >
-                <Archive size={14} />
+                <Archive
+                  size={14}
+                />
                 Open archive
               </Button>
             </div>
@@ -1601,7 +2230,9 @@ export default function SettingsPage() {
                   )
                 }
               >
-                <LogOut size={15} />
+                <LogOut
+                  size={15}
+                />
                 Sign out
               </Button>
             </div>
@@ -1617,20 +2248,26 @@ export default function SettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
           <div className="bg-navy-800 border border-navy-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <h3 className="text-lg font-display font-bold text-white mb-2">
-              Change your role
+              Change your
+              role
             </h3>
 
             <p className="text-sm text-navy-400 mb-4">
-              Select a new role. This
-              will update your dashboard
+              Select a new
+              role. This will
+              update your
+              dashboard
               experience.
             </p>
 
             <Select
-              value={selectedRole}
+              value={
+                selectedRole
+              }
               onChange={(e) =>
                 setSelectedRole(
-                  e.target.value as UserRole
+                  e.target
+                    .value as UserRole
                 )
               }
               options={ROLES.map(
@@ -1646,7 +2283,9 @@ export default function SettingsPage() {
 
             {roleConfirmError && (
               <p className="text-xs text-red-400 mb-2">
-                {roleConfirmError}
+                {
+                  roleConfirmError
+                }
               </p>
             )}
 
@@ -1654,7 +2293,9 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setShowRoleModal(false)
+                  setShowRoleModal(
+                    false
+                  )
                 }
                 className="px-4 py-2 rounded-lg bg-navy-700 text-navy-300 hover:bg-navy-600 transition-colors text-sm"
               >
@@ -1666,14 +2307,17 @@ export default function SettingsPage() {
                 onClick={
                   confirmRoleChange
                 }
-                loading={submitting}
+                loading={
+                  submitting
+                }
                 disabled={
                   selectedRole ===
                   profile?.role
                 }
                 className="px-4 py-2 rounded-lg text-sm"
               >
-                Confirm change
+                Confirm
+                change
               </Button>
             </div>
           </div>
@@ -1698,9 +2342,10 @@ export default function SettingsPage() {
                 </h3>
 
                 <p className="text-xs text-navy-500 mt-1">
-                  Archived records are
-                  automatically deleted
-                  after 10 days.
+                  Archived records
+                  are automatically
+                  deleted after 10
+                  days.
                 </p>
               </div>
 
@@ -1715,7 +2360,9 @@ export default function SettingsPage() {
                     archivedLoading
                   }
                 >
-                  <RefreshCw size={14} />
+                  <RefreshCw
+                    size={14}
+                  />
                 </Button>
 
                 <button
@@ -1738,17 +2385,21 @@ export default function SettingsPage() {
             <div className="p-4 overflow-y-auto max-h-[60vh]">
               {archivedLoading ? (
                 <div className="py-12 text-center text-sm text-navy-500">
-                  Loading archive…
+                  Loading
+                  archive…
                 </div>
               ) : archivedItems.length ===
                 0 ? (
                 <div className="py-12 text-center text-sm text-navy-500">
-                  Nothing is archived.
+                  Nothing is
+                  archived.
                 </div>
               ) : (
                 <div className="space-y-2">
                   {archivedItems.map(
-                    (item) => {
+                    (
+                      item
+                    ) => {
                       const key = `${item.type}:${item.id}`;
 
                       const label =
@@ -1771,7 +2422,9 @@ export default function SettingsPage() {
 
                       return (
                         <label
-                          key={key}
+                          key={
+                            key
+                          }
                           className="flex items-center gap-3 rounded-xl border border-navy-800 bg-navy-950/40 px-3 py-3 cursor-pointer hover:bg-navy-800/50"
                         >
                           <input
@@ -1789,11 +2442,17 @@ export default function SettingsPage() {
 
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold text-white truncate">
-                              {item.name}
+                              {
+                                item.name
+                              }
                             </div>
 
                             <div className="text-[11px] text-navy-500">
-                              {label} · Archived{" "}
+                              {
+                                label
+                              }{" "}
+                              ·
+                              Archived{" "}
                               {item.archived_at
                                 ? new Date(
                                     item.archived_at
@@ -1829,8 +2488,11 @@ export default function SettingsPage() {
                 }
                 className="w-full sm:w-auto"
               >
-                <Trash2 size={14} />
-                Delete selected
+                <Trash2
+                  size={14}
+                />
+                Delete
+                selected
               </Button>
             </div>
           </div>
@@ -1843,8 +2505,12 @@ export default function SettingsPage() {
 
       {toast && (
         <Toast
-          message={toast.msg}
-          type={toast.type}
+          message={
+            toast.msg
+          }
+          type={
+            toast.type
+          }
           onClose={() =>
             setToast(null)
           }
